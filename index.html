@@ -36,7 +36,11 @@ textarea::placeholder{color:#3a3a3a}
 .save-stone:disabled{background:#2a2a2a;cursor:not-allowed}
 .save-stone:disabled i{color:#484848}
 .save-stone i{font-size:17px;color:#0f0f0f;line-height:1}
-.compose-footer{display:flex;justify-content:flex-end;margin-top:.5rem;padding-top:.5rem;border-top:0.5px solid #222}
+.compose-footer{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;padding-top:.5rem;border-top:0.5px solid #222}
+.mic-btn{background:none;border:none;cursor:pointer;color:#555;padding:2px 4px;border-radius:6px;font-size:16px;line-height:1;transition:color .12s,background .12s;display:flex;align-items:center}
+.mic-btn:hover{color:#e8e6e0;background:#222}
+.mic-btn.recording{color:#e24b4a;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
 .char-count{font-size:11px;color:#444}
 .mini-cal{background:#1a1a1a;border:0.5px solid #2a2a2a;border-radius:10px;padding:.5rem .6rem;width:148px;flex-shrink:0}
 .side-col{display:flex;flex-direction:column;gap:.625rem;width:148px;flex-shrink:0}
@@ -132,6 +136,9 @@ textarea::placeholder{color:#3a3a3a}
         </button>
       </div>
       <div class="compose-footer">
+        <button class="mic-btn" id="mic-btn" aria-label="음성 입력">
+          <i class="ti ti-microphone" id="mic-icon"></i>
+        </button>
         <span class="char-count" id="char-count">0 / 10,000</span>
       </div>
     </div>
@@ -498,6 +505,91 @@ document.getElementById('prev-btn').addEventListener('click', () => {
 document.getElementById('next-btn').addEventListener('click', () => {
   viewMonth++; if(viewMonth>11){viewMonth=0;viewYear++;} renderCal();
 });
+
+// ── 음성 입력 (Web Speech API) ────────────────────
+(function() {
+  var micBtn = document.getElementById('mic-btn');
+  var micIcon = document.getElementById('mic-icon');
+  var memoInput = document.getElementById('memo-input');
+
+  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if (!SpeechRecognition) {
+    micBtn.title = '이 브라우저는 음성 입력을 지원하지 않아요 (Chrome 권장)';
+    micBtn.style.opacity = '0.3';
+    micBtn.style.cursor = 'not-allowed';
+    return;
+  }
+
+  var recog = new SpeechRecognition();
+  recog.lang = 'ko-KR';
+  recog.continuous = true;       // 말하는 동안 계속 인식
+  recog.interimResults = true;   // 중간 결과도 실시간 표시
+
+  var isRecording = false;
+  var baseText = '';             // 음성 시작 전 이미 입력된 텍스트
+
+  function updateInputUI() {
+    var len = memoInput.value.length;
+    var cc = document.getElementById('char-count');
+    var sb = document.getElementById('save-btn');
+    cc.textContent = len.toLocaleString() + ' / 10,000';
+    cc.style.color = len > 9000 ? '#e24b4a' : '#444';
+    sb.disabled = len === 0;
+    sb.style.background = len === 0 ? '#2a2a2a' : '#e8e6e0';
+    sb.querySelector('i').style.color = len === 0 ? '#484848' : '#0f0f0f';
+  }
+
+  recog.onresult = function(e) {
+    var interim = '';
+    var final = '';
+    for (var i = e.resultIndex; i < e.results.length; i++) {
+      var t = e.results[i][0].transcript;
+      if (e.results[i].isFinal) final += t;
+      else interim += t;
+    }
+    // 확정된 텍스트는 baseText에 누적, 중간 결과는 미리보기
+    if (final) baseText += final;
+    memoInput.value = baseText + interim;
+    updateInputUI();
+  };
+
+  recog.onerror = function(e) {
+    console.error('음성 인식 오류:', e.error);
+    stopRecording();
+  };
+
+  recog.onend = function() {
+    if (isRecording) {
+      // 말이 잠깐 끊겨도 계속 인식 유지
+      try { recog.start(); } catch(e) {}
+    }
+  };
+
+  function startRecording() {
+    isRecording = true;
+    baseText = memoInput.value;  // 기존 텍스트 보존
+    micBtn.classList.add('recording');
+    micIcon.className = 'ti ti-microphone-off';
+    micBtn.title = '클릭하면 음성 입력 종료';
+    try { recog.start(); } catch(e) {}
+  }
+
+  function stopRecording() {
+    isRecording = false;
+    recog.stop();
+    micBtn.classList.remove('recording');
+    micIcon.className = 'ti ti-microphone';
+    micBtn.title = '음성 입력';
+    // 중간 결과 없이 최종 텍스트만 유지
+    memoInput.value = baseText;
+    updateInputUI();
+  }
+
+  micBtn.addEventListener('click', function() {
+    if (isRecording) stopRecording();
+    else startRecording();
+  });
+})();
 </script>
 </body>
 </html>
