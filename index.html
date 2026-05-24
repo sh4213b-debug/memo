@@ -235,70 +235,103 @@ function dateKey(d) {
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 
-// ── 키워드 추출 ───────────────────────────────────
-const STOPWORDS = new Set([
-  '이','그','저','것','수','을','를','가','은','는','에','의','로','으로',
-  '와','과','도','만','에서','까지','부터','에게','처럼','같이','보다',
-  '이다','있다','없다','하다','되다','그리고','하지만','그러나','또한',
-  '그래서','따라서','및','등','들','습니다','합니다','했다','한다','할','하는',
-  '된','위해','통해','대한','있는','없는','같은','다른','더','가장','매우',
-  '정말','너무','아주','많이','모든','각','여러','한','두','세','오늘','어제',
-  '내일','지금','때','일','년','월','시','분','이번','다음','지난'
-]);
+// ── 유사 메모 검색 ────────────────────────────────
+// 불용어: 조사/어미/접속사 등 의미 없는 단어 제외
+const SW = '이 그 저 것 수 을 를 가 은 는 에 의 로 으로 와 과 도 만 에서 까지 부터 에게 처럼 같이 보다 이다 있다 없다 하다 되다 그리고 하지만 그러나 또한 그래서 따라서 및 등 들 습니다 합니다 했다 한다 할 하는 된 위해 통해 대한 있는 없는 같은 다른 더 가장 매우 정말 너무 아주 많이 모든 각 여러 한 두 세 오늘 어제 내일 지금 때 일 년 월 시 분 이번 다음 지난 제가 저는 나는 내가 우리 너무 아직 이제 거의 약간 조금 아마 왜 어떻게 무엇 언제 어디'.split(' ');
+const STOP = new Set(SW);
 
-function extractKeywords(text) {
-  const words = text
-    .replace(/[^가-힣a-zA-Z0-9\s]/g, ' ')
-    .split(/\s+/)
-    .map(w => w.trim().toLowerCase())
-    .filter(w => w.length >= 2 && !STOPWORDS.has(w));
-  return [...new Set(words)];
+function getWords(text) {
+  // 특수문자 제거 후 공백 분리, 2글자 이상, 불용어 제외, 중복 제거
+  var raw = text.replace(/[^\uAC00-\uD7A3a-zA-Z0-9\s]/g, ' ').split(/\s+/);
+  var result = [];
+  var seen = {};
+  for (var i = 0; i < raw.length; i++) {
+    var w = raw[i].trim();
+    if (w.length >= 2 && !STOP.has(w) && !seen[w]) {
+      seen[w] = true;
+      result.push(w);
+    }
+  }
+  return result;
 }
 
-function findRelatedMemos(newText, savedTs) {
-  const newKws = extractKeywords(newText);
-  if (newKws.length === 0) return [];
-  const newSet = new Set(newKws);
-  const results = [];
-  allMemos.forEach(memo => {
-    if (memo.ts === savedTs) return;
-    const memoKws = extractKeywords(memo.text);
-    const matched = memoKws.filter(k => newSet.has(k));
-    if (matched.length >= 2) results.push({ memo, matched });
-  });
-  results.sort((a, b) => b.matched.length - a.matched.length);
+function findSimilar(newText, memoList) {
+  var newWords = getWords(newText);
+  if (newWords.length === 0) return [];
+  var newSet = {};
+  for (var i = 0; i < newWords.length; i++) newSet[newWords[i]] = true;
+
+  var results = [];
+  for (var j = 0; j < memoList.length; j++) {
+    var memo = memoList[j];
+    var memoWords = getWords(memo.text);
+    var matched = [];
+    for (var k = 0; k < memoWords.length; k++) {
+      if (newSet[memoWords[k]]) matched.push(memoWords[k]);
+    }
+    if (matched.length >= 2) {
+      results.push({ memo: memo, matched: matched });
+    }
+  }
+  results.sort(function(a, b) { return b.matched.length - a.matched.length; });
   return results.slice(0, 5);
 }
 
 function showRelatedPanel(results) {
-  const panel = document.getElementById('related-panel');
-  const list = document.getElementById('related-list');
-  if (results.length === 0) { panel.style.display = 'none'; return; }
+  var panel = document.getElementById('related-panel');
+  var list = document.getElementById('related-list');
+  if (!results || results.length === 0) {
+    panel.style.display = 'none';
+    return;
+  }
   list.innerHTML = '';
-  results.forEach(({ memo, matched }) => {
-    const dt = new Date(memo.ts);
-    const dateStr = dt.getFullYear()+'년 '+MONTHS[dt.getMonth()]+' '+dt.getDate()+'일';
-    const hh = String(dt.getHours()).padStart(2,'0');
-    const mm = String(dt.getMinutes()).padStart(2,'0');
-    const card = document.createElement('div');
+  for (var i = 0; i < results.length; i++) {
+    var item = results[i];
+    var memo = item.memo;
+    var matched = item.matched;
+    var dt = new Date(memo.ts);
+    var mo = dt.getMonth();
+    var dateStr = (dt.getMonth()+1)+'월 '+dt.getDate()+'일';
+    var hh = String(dt.getHours()).padStart(2,'0');
+    var mm = String(dt.getMinutes()).padStart(2,'0');
+    var preview = memo.text.length > 40 ? memo.text.slice(0, 40)+'…' : memo.text;
+
+    var card = document.createElement('div');
     card.className = 'related-card';
-    card.innerHTML =
-      '<div class="related-card-text"></div>'+
-      '<div class="related-card-meta">'+dateStr+' '+hh+':'+mm+'</div>'+
-      '<div class="related-card-keywords">공통 키워드: '+matched.join(', ')+'</div>';
-    card.querySelector('.related-card-text').textContent = memo.text;
-    card.addEventListener('click', () => {
-      const k = dateKey(dt);
-      viewYear = dt.getFullYear(); viewMonth = dt.getMonth();
-      renderCal(); selectDay(k, dt.getDate());
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
+
+    var textEl = document.createElement('div');
+    textEl.className = 'related-card-text';
+    textEl.textContent = preview;
+
+    var metaEl = document.createElement('div');
+    metaEl.className = 'related-card-meta';
+    metaEl.textContent = dateStr+' '+hh+':'+mm;
+
+    var kwEl = document.createElement('div');
+    kwEl.className = 'related-card-keywords';
+    kwEl.textContent = '# '+matched.slice(0,4).join('  # ');
+
+    card.appendChild(textEl);
+    card.appendChild(metaEl);
+    card.appendChild(kwEl);
+
+    (function(d, day) {
+      card.addEventListener('click', function() {
+        var k = dateKey(d);
+        viewYear = d.getFullYear();
+        viewMonth = d.getMonth();
+        renderCal();
+        selectDay(k, day);
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+      });
+    })(dt, dt.getDate());
+
     list.appendChild(card);
-  });
+  }
   panel.style.display = 'block';
 }
 
-document.getElementById('related-close').addEventListener('click', () => {
+document.getElementById('related-close').addEventListener('click', function() {
   document.getElementById('related-panel').style.display = 'none';
 });
 
@@ -388,39 +421,33 @@ function subscribeToMemos(uid) {
 }
 
 // ── 메모 저장 ─────────────────────────────────────
-async function addMemo() {
-  const input = document.getElementById('memo-input');
-  const text = input.value.trim();
+function addMemo() {
+  var input = document.getElementById('memo-input');
+  var text = input.value.trim();
   if (!text || !currentUser) return;
 
-  // 저장 전 현재 메모 목록 스냅샷 (방금 저장할 메모는 아직 없음)
-  const memosBefore = allMemos.slice();
+  // 저장 전 기존 메모 목록 복사 (새 메모 자신 제외)
+  var memosBefore = allMemos.slice();
 
-  const savedTs = Date.now();
-  await addDoc(collection(db, 'memos'), { uid: currentUser.uid, text, ts: savedTs });
+  addDoc(collection(db, 'memos'), { uid: currentUser.uid, text: text, ts: Date.now() })
+    .then(function() {
+      // addDoc 완료 후 — memosBefore 기준으로 유사 메모 검색
+      var similar = findSimilar(text, memosBefore);
 
-  // 저장 후: 저장 전 목록 기준으로 연관 메모 계산 (새 메모 자신 제외)
-  const newKws = extractKeywords(text);
-  const newSet = new Set(newKws);
-  const related = [];
-  memosBefore.forEach(memo => {
-    const memoKws = extractKeywords(memo.text);
-    const matched = memoKws.filter(k => newSet.has(k));
-    if (matched.length >= 2) related.push({ memo, matched });
-  });
-  related.sort((a, b) => b.matched.length - a.matched.length);
-  const top = related.slice(0, 5);
-
-  input.value = '';
-  document.getElementById('char-count').textContent = '0 / 10,000';
-  document.getElementById('char-count').style.color = '#444';
-  const sb = document.getElementById('save-btn');
-  sb.disabled = true; sb.style.background = '#2a2a2a';
-  sb.querySelector('i').style.color = '#484848';
-  viewYear = todayObj.getFullYear(); viewMonth = todayObj.getMonth();
-  renderCal();
-  selectDay(todayKey, todayObj.getDate());
-  showRelatedPanel(top);
+      input.value = '';
+      document.getElementById('char-count').textContent = '0 / 10,000';
+      document.getElementById('char-count').style.color = '#444';
+      var sb = document.getElementById('save-btn');
+      sb.disabled = true;
+      sb.style.background = '#2a2a2a';
+      sb.querySelector('i').style.color = '#484848';
+      viewYear = todayObj.getFullYear();
+      viewMonth = todayObj.getMonth();
+      renderCal();
+      selectDay(todayKey, todayObj.getDate());
+      showRelatedPanel(similar);
+    })
+    .catch(function(err) { console.error('저장 오류:', err); });
 }
 
 // ── 인증 ──────────────────────────────────────────
