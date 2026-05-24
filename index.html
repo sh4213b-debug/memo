@@ -432,14 +432,17 @@ textarea::placeholder{color:var(--ui-muted)}
 }
 
 /* ── PC / 모바일 분기 ─────────────────────── */
-.mobile-only { display: none !important; }
-.pc-only     { display: flex; }
-.mobile-layout { display: none !important; }
+/* 기본(PC): 모바일 요소 완전 숨김 */
+.mobile-only  { display: none !important; }
+.mobile-layout{ display: none !important; }
+/* PC 요소는 flex로 표시 */
+.pc-only      { display: flex !important; }
 
+/* 모바일(600px 이하): PC 요소 완전 숨김 */
 @media (max-width: 600px) {
-  .pc-only       { display: none !important; }
-  .mobile-only   { display: flex !important; }
-  .mobile-layout { display: block !important; }
+  .pc-only      { display: none !important; }
+  .mobile-only  { display: flex !important; }
+  .mobile-layout{ display: block !important; }
 }
 
 @media (max-width: 600px) {
