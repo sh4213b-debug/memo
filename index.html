@@ -394,8 +394,38 @@ textarea::placeholder{color:var(--ui-muted)}
 }
 .search-no-result{font-size:13px;color:var(--ui-muted);padding:.75rem 0;text-align:center}
 
-/* 모바일 검색 */
-@media(max-width:600px){
+/* 오버레이 내 미리보기 */
+.search-preview{
+  border-top:0.5px solid rgba(128,128,128,.2);
+  padding:.5rem .75rem .75rem;
+  max-height:280px;overflow-y:auto;
+  scrollbar-width:none;
+}
+.search-preview::-webkit-scrollbar{display:none}
+.search-preview-list{display:flex;flex-direction:column;gap:.375rem}
+.search-preview-item{
+  padding:.5rem .75rem;border-radius:8px;cursor:pointer;
+  background:rgba(128,128,128,.08);
+  transition:background .1s;
+}
+.search-preview-item:hover{background:rgba(128,128,128,.16)}
+.search-preview-date{font-size:11px;color:var(--dialog-sub);margin-bottom:.2rem}
+.search-preview-text{
+  font-size:13px;color:var(--dialog-text);line-height:1.5;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.search-preview-text mark{
+  background:rgba(200,185,122,.45);color:inherit;
+  border-radius:2px;padding:0 1px;
+}
+.search-preview-enter{
+  text-align:center;font-size:11px;
+  color:var(--dialog-sub);margin-top:.625rem;
+}
+.search-preview-empty{
+  font-size:13px;color:var(--dialog-sub);
+  text-align:center;padding:.75rem 0;
+}
   .search-overlay{padding-top:3rem}
   .search-modal{width:92vw}
   .search-input{font-size:16px}
@@ -613,6 +643,11 @@ textarea::placeholder{color:var(--ui-muted)}
       <i class="ti ti-search" style="font-size:16px;color:var(--ui-muted);flex-shrink:0" aria-hidden="true"></i>
       <input class="search-input" id="search-input" type="text" placeholder="검색어를 입력하세요..." autocomplete="off" maxlength="100">
       <button class="search-close-btn" id="search-close-btn"><i class="ti ti-x"></i></button>
+    </div>
+    <!-- 오버레이 내 실시간 미리보기 -->
+    <div class="search-preview" id="search-preview" style="display:none">
+      <div class="search-preview-list" id="search-preview-list"></div>
+      <div class="search-preview-enter">Enter ↵ 키로 전체 결과 보기</div>
     </div>
   </div>
 </div>
@@ -1293,12 +1328,66 @@ document.getElementById('search-close-btn').addEventListener('click', closeSearc
 document.getElementById('search-overlay').addEventListener('click', function(e) {
   if (e.target === this) closeSearch();
 });
+
+// 실시간 미리보기 (오버레이 안)
 document.getElementById('search-input').addEventListener('input', function() {
-  runSearch(this.value);
+  var query = this.value.trim();
+  var preview = document.getElementById('search-preview');
+  var list    = document.getElementById('search-preview-list');
+  list.innerHTML = '';
+
+  if (!query) { preview.style.display = 'none'; return; }
+
+  var q = query.toLowerCase();
+  var matched = allMemos.filter(function(m){
+    return m.text.toLowerCase().indexOf(q) !== -1;
+  }).sort(function(a,b){ return b.ts - a.ts; }).slice(0, 5);
+
+  if (matched.length === 0) {
+    var emp = document.createElement('div');
+    emp.className = 'search-preview-empty';
+    emp.textContent = '일치하는 메모가 없어요';
+    list.appendChild(emp);
+  } else {
+    matched.forEach(function(memo) {
+      var dt = new Date(memo.ts);
+      var dateStr = (dt.getMonth()+1)+'월 '+dt.getDate()+'일';
+      var item = document.createElement('div');
+      item.className = 'search-preview-item';
+      var dateEl = document.createElement('div');
+      dateEl.className = 'search-preview-date';
+      dateEl.textContent = dateStr;
+      item.appendChild(dateEl);
+      item.appendChild(highlightText(memo.text, query));
+      item.querySelector('.search-result-text').className = 'search-preview-text';
+      // 미리보기 클릭 시 바로 이동
+      (function(d) {
+        item.addEventListener('click', function() {
+          closeSearch();
+          var k = dateKey(d);
+          viewYear = d.getFullYear(); viewMonth = d.getMonth();
+          renderCal(); selectDay(k, d.getDate());
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      })(dt);
+      list.appendChild(item);
+    });
+  }
+  preview.style.display = 'block';
 });
+
+// Enter → 오버레이 닫고 전체 결과 패널 표시
 document.getElementById('search-input').addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') closeSearch();
-  if (e.key === 'Enter') { closeSearch(); }
+  if (e.key === 'Escape') { closeSearch(); return; }
+  if (e.key === 'Enter') {
+    var query = this.value.trim();
+    if (!query) return;
+    document.getElementById('search-overlay').style.display = 'none';
+    document.getElementById('search-preview').style.display = 'none';
+    document.getElementById('search-preview-list').innerHTML = '';
+    document.getElementById('search-input').value = '';
+    runSearch(query);
+  }
 });
 document.getElementById('search-panel-close').addEventListener('click', function() {
   document.getElementById('search-panel').style.display = 'none';
