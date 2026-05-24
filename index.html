@@ -739,16 +739,23 @@ function selectDay(k,d) {
 }
 
 // ── Firestore 구독 ────────────────────────
-var justSaved = false; // 저장 직후 onSnapshot 재실행 방지 플래그
+var justSaved = 0; // 저장 직후 onSnapshot 재실행 카운터
 
 function subscribeToMemos(uid) {
   if (unsubscribe) unsubscribe();
   var q = query(collection(db,'memos'), where('uid','==',uid));
   unsubscribe = onSnapshot(q, function(snapshot){
+    var prevCount = allMemos.length;
     allMemos = snapshot.docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
+
+    // 피보나치 달성 여부 체크 후 돌 업데이트 (소리는 addMemo에서 이미 재생)
     updateStones(allMemos.length, false);
     renderCal();
-    if (justSaved) { justSaved = false; return; } // 저장 직후엔 selectDay 재호출 생략
+
+    if (justSaved > 0) {
+      justSaved--;
+      return; // 저장 직후엔 selectDay 자동 재호출 생략 (addMemo .then에서 직접 호출)
+    }
     if (selectedKey){
       var still=allMemos.some(function(m){ return dateKey(new Date(m.ts))===selectedKey; });
       if (still) selectDay(selectedKey,parseInt(selectedKey.split('-')[2]));
@@ -762,22 +769,31 @@ function addMemo() {
   var input=document.getElementById('memo-input');
   var text=input.value.trim();
   if (!text||!currentUser) return;
-  var memosBefore=allMemos.slice();
-  justSaved = true; // onSnapshot 재실행 시 selectDay 생략
+
+  // 1) 저장 전 유사 메모 계산 (현재 allMemos 기준)
+  var similar=findSimilar(text,allMemos);
+
+  // 2) 소리는 사용자 클릭 직후 즉시 재생 (브라우저 정책)
+  playStoneSound(stonePositions.length % 2 === 0); // 홀짝으로 흑백 교차
+
+  // 3) UI 즉시 초기화
+  input.value='';
+  document.getElementById('char-count').textContent='0 / 10,000';
+  document.getElementById('char-count').style.color='';
+  var sb=document.getElementById('save-btn');
+  sb.disabled=true;
+
+  // 4) justSaved 플래그: onSnapshot이 먼저 올 경우를 대비해 두 번 허용
+  justSaved = 2;
+
+  // 5) Firestore 저장
   addDoc(collection(db,'memos'),{uid:currentUser.uid,text:text,ts:Date.now()})
     .then(function(){
-      var similar=findSimilar(text,memosBefore);
-      input.value='';
-      document.getElementById('char-count').textContent='0 / 10,000';
-      document.getElementById('char-count').style.color='';
-      var sb=document.getElementById('save-btn');
-      sb.disabled=true; sb.style.opacity='';
       viewYear=todayObj.getFullYear(); viewMonth=todayObj.getMonth();
       renderCal(); selectDay(todayKey,todayObj.getDate());
-      updateStones(allMemos.length, true); // 저장 시 소리 포함
       showRelatedPanel(similar);
     })
-    .catch(function(err){ console.error('저장 오류:',err); justSaved=false; });
+    .catch(function(err){ console.error('저장 오류:',err); justSaved=0; });
 }
 
 // ── 인증 ──────────────────────────────────
@@ -793,7 +809,7 @@ onAuthStateChanged(auth, function(user){
   } else {
     currentUser=null;
     if(unsubscribe){unsubscribe();unsubscribe=null;}
-    allMemos=[]; lastStoneCount=0; stonePositions=[]; usedPoints={}; drawStones();
+    allMemos=[]; justSaved=0; lastStoneCount=0; stonePositions=[]; usedPoints={}; drawStones();
     showView('login');
   }
 });
