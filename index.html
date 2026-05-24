@@ -430,118 +430,75 @@ textarea::placeholder{color:var(--ui-muted)}
   .search-modal{width:92vw}
   .search-input{font-size:16px}
 }
+
+/* ── PC / 모바일 분기 ─────────────────────── */
+.mobile-only { display: none !important; }
+.pc-only     { display: flex; }
+.mobile-layout { display: none !important; }
+
 @media (max-width: 600px) {
-  :root {
-    --margin: 0.4cm;
-    --cell-w: 22px;
-    --cell-h: 23.5px;
-  }
+  .pc-only       { display: none !important; }
+  .mobile-only   { display: flex !important; }
+  .mobile-layout { display: block !important; }
+}
 
-  .app { padding: 1rem .875rem; }
+@media (max-width: 600px) {
+  :root { --margin: 0.4cm; --cell-w: 22px; --cell-h: 23.5px; }
 
-  /* 헤더 — 한 줄 고정 */
+  .app { padding: .875rem .875rem; }
+
   .app-header {
-    margin-bottom: 1rem;
-    gap: .375rem;
-    flex-wrap: nowrap;
-    align-items: center;
+    margin-bottom: .875rem; gap: .375rem;
+    flex-wrap: nowrap; align-items: center; width: 100%;
   }
-  .header-left { flex-shrink: 0; min-width: 0; }
-  .date-label { font-size: 8px; letter-spacing: .06em; }
+  .header-left { flex: 1; min-width: 0; overflow: hidden; }
+  .date-label { font-size: 8px; letter-spacing:.06em; }
   .date-text {
-    font-size: clamp(12px, 3.8vw, 17px); /* 화면 폭에 따라 자동 조정 */
-    white-space: nowrap;
+    font-size: clamp(12px, 3.6vw, 16px);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
     text-shadow: 0 0 10px var(--bg), 0 0 6px var(--bg);
   }
-  .header-right {
-    gap: .3rem;
-    flex-shrink: 0;
-    flex-wrap: nowrap;
-    align-items: center;
-  }
-  .user-name { display: none; }
+  .header-right { flex-shrink: 0; gap: .3rem; flex-wrap: nowrap; align-items: center; }
   .user-avatar { width: 24px; height: 24px; }
-  .theme-btn { padding: 3px 5px; font-size: 12px; }
-  .export-btn { padding: 3px 5px; font-size: 12px; }
-  .logout-btn {
-    padding: 3px 7px;
-    font-size: clamp(9px, 2.2vw, 11px);
-    white-space: nowrap;
-  }
+  .theme-btn   { padding: 3px 5px; font-size: 12px; }
+  .search-btn  { padding: 3px 5px; font-size: 12px; }
+  .logout-btn  { padding: 3px 7px; font-size: clamp(9px, 2.2vw, 11px); white-space: nowrap; }
 
-  /* 메인 레이아웃: 완전 세로 스택 */
-  .main-row {
-    flex-direction: column;
-    gap: .75rem;
-    margin-bottom: 1rem;
-  }
+  .mobile-layout .compose { width:100%; border-radius:12px; padding:.875rem 1rem; margin-bottom:0; }
+  .mobile-layout textarea { font-size:16px; min-height:100px; width:100%; }
+  .mobile-layout .save-stone { width:38px; height:38px; }
+  .mobile-layout .save-stone i { font-size:15px; }
 
-  /* 입력창: 가로 꽉 차게 */
-  .compose {
-    width: 100%;
-    border-radius: 12px;
-    padding: .875rem 1rem;
-  }
-  textarea {
-    font-size: 16px;
-    min-height: 100px;
-    width: 100%;
-  }
+  .mobile-layout .mini-cal    { padding:.5rem .75rem; }
+  .mobile-layout .mcal-header { margin-bottom:.4rem; }
+  .mobile-layout .mcal-title  { font-size:16px; }
+  .mobile-layout .mcal-nav    { font-size:16px; }
+  .mobile-layout .mcal-grid   { gap:2px; }
+  .mobile-layout .mcal-dow    { font-size:13px; padding:3px 0; }
+  .mobile-layout .mcal-day    { font-size:14px; }
+  .mobile-layout .mcal-day.active { font-size:13px; }
 
-  /* 저장 버튼 */
-  .save-stone { width: 38px; height: 38px; }
-  .save-stone i { font-size: 15px; }
+  .related-card { width:130px; }
+  .related-panel { padding:.5rem .625rem; margin-bottom:1rem; }
+  .related-card-text { font-size:12px; }
+  .related-card-meta { font-size:10px; }
 
-  /* 사이드 컬럼: 가로 꽉 차게, 달력만 세로 */
-  .side-col {
-    width: 100%;
-    flex-direction: column;
-    gap: .625rem;
-  }
+  .memo-card { padding:.75rem .875rem; border-radius:10px; }
+  .memo-text { font-size:15px; }
+  .memo-time { font-size:11px; }
+  .memo-panel-title { font-size:11px; }
+  .empty-day { font-size:14px; }
 
-  /* 달력: 입력창과 동일한 가로 폭, 크기는 컴팩트하게 */
-  .mini-cal {
-    width: 100%;
-    padding: .5rem .75rem;
-  }
-  .mcal-header { margin-bottom: .4rem; }
-  .mcal-title { font-size: 16px; }
-  .mcal-nav { font-size: 16px; }
-  /* 달력 칸 크기 줄이기 — 7칸이 가로에 맞게 */
-  .mcal-grid { gap: 2px; }
-  .mcal-dow { font-size: 13px; padding: 3px 0; }
-  .mcal-day { font-size: 14px; }
-  .mcal-day.active { font-size: 13px; }
-
-  /* 연관 기록 */
-  .related-card { width: 130px; }
-  .related-panel { padding: .5rem .625rem; margin-bottom: 1rem; }
-  .related-card-text { font-size: 12px; }
-  .related-card-meta { font-size: 10px; }
-
-  /* 메모 카드 */
-  .memo-card { padding: .75rem .875rem; border-radius: 10px; }
-  .memo-text { font-size: 15px; }
-  .memo-time { font-size: 11px; }
-  .memo-panel-title { font-size: 11px; }
-  .empty-day { font-size: 14px; }
-
-  /* 다이얼로그 */
-  .dialog-box { padding: 1.5rem 1.25rem; }
-  .dialog-msg { font-size: 15px; }
-  .dialog-btn { padding: 8px 20px; font-size: 13px; }
-
-  /* 토스트 */
-  .toast {
-    font-size: 12px; padding: .625rem 1.25rem;
-    white-space: normal; text-align: center; max-width: 85vw;
-  }
+  .dialog-box { padding:1.5rem 1.25rem; }
+  .dialog-msg { font-size:15px; }
+  .dialog-btn { padding:8px 20px; font-size:13px; }
+  .toast { font-size:12px; padding:.625rem 1.25rem; white-space:normal; text-align:center; max-width:85vw; }
 }
 
 @media (max-width: 380px) {
-  .date-text { font-size: 15px; }
-  .mcal-dow { font-size: 9px; }
-  .mcal-day { font-size: 10px; }
+  .date-text { font-size: 13px; }
+  .mobile-layout .mcal-dow { font-size:11px; }
+  .mobile-layout .mcal-day { font-size:12px; }
 }
 </style>
 </head>
@@ -568,7 +525,9 @@ textarea::placeholder{color:var(--ui-muted)}
 </div>
 
 <div class="app" id="app-view" style="display:none">
-  <div class="app-header">
+
+  <!-- PC 헤더 -->
+  <div class="app-header pc-only">
     <div class="header-left">
       <div class="date-label">오늘</div>
       <div class="date-text" id="today-display"></div>
@@ -585,7 +544,22 @@ textarea::placeholder{color:var(--ui-muted)}
     </div>
   </div>
 
-  <div class="main-row">
+  <!-- 모바일 헤더 -->
+  <div class="app-header mobile-only">
+    <div class="header-left">
+      <div class="date-label">오늘</div>
+      <div class="date-text" id="today-display-m"></div>
+    </div>
+    <div class="header-right">
+      <button class="theme-btn" id="theme-btn-m" title="테마 전환">☀️</button>
+      <button class="search-btn" id="search-btn-m" title="메모 검색"><i class="ti ti-search"></i></button>
+      <img class="user-avatar" id="user-avatar-m" src="" alt="">
+      <button class="logout-btn" id="logout-btn-m">로그아웃</button>
+    </div>
+  </div>
+
+  <!-- PC 레이아웃: 입력창 + 사이드(달력) 가로 배치 -->
+  <div class="main-row pc-only">
     <div class="compose">
       <div class="compose-top">
         <textarea id="memo-input" placeholder="지금 무슨 생각을 하고 있나요?" maxlength="10000"></textarea>
@@ -600,7 +574,6 @@ textarea::placeholder{color:var(--ui-muted)}
         <span class="char-count" id="char-count">0 / 10,000</span>
       </div>
     </div>
-
     <div class="side-col">
       <div class="mini-cal">
         <div class="mcal-header">
@@ -610,6 +583,32 @@ textarea::placeholder{color:var(--ui-muted)}
         </div>
         <div class="mcal-grid" id="cal-grid"></div>
       </div>
+    </div>
+  </div>
+
+  <!-- 모바일 레이아웃: 입력창 → 달력 세로 배치 -->
+  <div class="mobile-only mobile-layout">
+    <div class="compose">
+      <div class="compose-top">
+        <textarea id="memo-input-m" placeholder="지금 무슨 생각을 하고 있나요?" maxlength="10000"></textarea>
+        <button class="save-stone" id="save-btn-m" disabled aria-label="저장">
+          <i class="ti ti-check" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="compose-footer">
+        <button class="mic-btn" id="mic-btn-m" aria-label="음성 입력">
+          <i class="ti ti-microphone" id="mic-icon-m"></i>
+        </button>
+        <span class="char-count" id="char-count-m">0 / 10,000</span>
+      </div>
+    </div>
+    <div class="mini-cal" style="width:100%;margin-top:.75rem">
+      <div class="mcal-header">
+        <button class="mcal-nav" id="prev-btn-m"><i class="ti ti-chevron-left"></i></button>
+        <span class="mcal-title" id="cal-title-m"></span>
+        <button class="mcal-nav" id="next-btn-m"><i class="ti ti-chevron-right"></i></button>
+      </div>
+      <div class="mcal-grid" id="cal-grid-m"></div>
     </div>
   </div>
 
@@ -1046,18 +1045,17 @@ function activeDates() {
   var s = {}; allMemos.forEach(function(m){ s[dateKey(new Date(m.ts))]=true; }); return s;
 }
 
-function renderCal() {
-  var calTitle = document.getElementById('cal-title');
-  var calGrid  = document.getElementById('cal-grid');
-  calTitle.textContent = viewYear+'년 '+MONTHS[viewMonth];
-  calGrid.innerHTML = '';
+function renderOneCalGrid(calTitleEl, calGridEl) {
+  if (!calTitleEl || !calGridEl) return;
+  calTitleEl.textContent = viewYear+'년 '+MONTHS[viewMonth];
+  calGridEl.innerHTML = '';
   DOW.forEach(function(d){
-    var el=document.createElement('div'); el.className='mcal-dow'; el.textContent=d; calGrid.appendChild(el);
+    var el=document.createElement('div'); el.className='mcal-dow'; el.textContent=d; calGridEl.appendChild(el);
   });
   var active = activeDates();
   var firstDay = new Date(viewYear,viewMonth,1).getDay();
   var daysInMonth = new Date(viewYear,viewMonth+1,0).getDate();
-  for (var i=0;i<firstDay;i++){var el=document.createElement('div');el.className='mcal-day empty';calGrid.appendChild(el);}
+  for (var i=0;i<firstDay;i++){var el=document.createElement('div');el.className='mcal-day empty';calGridEl.appendChild(el);}
   for (var d=1;d<=daysInMonth;d++){
     var el=document.createElement('div');
     var k=viewYear+'-'+String(viewMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
@@ -1066,8 +1064,15 @@ function renderCal() {
     if (active[k]) el.classList.add('active');
     if (k===selectedKey) el.classList.add('selected');
     if (active[k]) (function(kk,dd){ el.addEventListener('click',function(){ selectDay(kk,dd); }); })(k,d);
-    calGrid.appendChild(el);
+    calGridEl.appendChild(el);
   }
+}
+
+function renderCal() {
+  // PC 달력
+  renderOneCalGrid(document.getElementById('cal-title'), document.getElementById('cal-grid'));
+  // 모바일 달력
+  renderOneCalGrid(document.getElementById('cal-title-m'), document.getElementById('cal-grid-m'));
 }
 
 // ── 메모 패널 ─────────────────────────────
@@ -1162,10 +1167,16 @@ function addMemo() {
 
   // 3) UI 즉시 초기화
   input.value='';
+  var inputM = document.getElementById('memo-input-m');
+  if (inputM) inputM.value = '';
   document.getElementById('char-count').textContent='0 / 10,000';
   document.getElementById('char-count').style.color='';
+  var ccm = document.getElementById('char-count-m');
+  if (ccm) { ccm.textContent='0 / 10,000'; ccm.style.color=''; }
   var sb=document.getElementById('save-btn');
   sb.disabled=true;
+  var sbm=document.getElementById('save-btn-m');
+  if (sbm) sbm.disabled=true;
 
   // 4) justSaved 플래그: onSnapshot이 먼저 올 경우를 대비해 두 번 허용
   justSaved = 2;
@@ -1184,10 +1195,18 @@ function addMemo() {
 onAuthStateChanged(auth, function(user){
   if (user){
     currentUser=user;
+    var dateStr = todayObj.getFullYear()+'년 '+MONTHS[todayObj.getMonth()]+' '+todayObj.getDate()+'일 '+DOW[todayObj.getDay()]+'요일';
+    // PC
     document.getElementById('user-avatar').src=user.photoURL||'';
     document.getElementById('user-name').textContent=user.displayName||user.email;
-    document.getElementById('today-display').textContent=
-      todayObj.getFullYear()+'년 '+MONTHS[todayObj.getMonth()]+' '+todayObj.getDate()+'일 '+DOW[todayObj.getDay()]+'요일';
+    document.getElementById('today-display').textContent=dateStr;
+    // 모바일
+    document.getElementById('user-avatar-m').src=user.photoURL||'';
+    document.getElementById('today-display-m').textContent=dateStr;
+    // 테마 버튼 동기화
+    var themeIcon = currentTheme === 'dark' ? '☀️' : '🌙';
+    document.getElementById('theme-btn').textContent=themeIcon;
+    document.getElementById('theme-btn-m').textContent=themeIcon;
     subscribeToMemos(user.uid);
     showView('app');
   } else {
@@ -1599,17 +1618,31 @@ function uploadParsed(parsed) {
   next(0);
 }
 
-// ── 입력 UI ───────────────────────────────
-function updateInputUI(){
-  var input=document.getElementById('memo-input');
-  var len=input.value.length;
-  var cc=document.getElementById('char-count');
-  var sb=document.getElementById('save-btn');
-  cc.textContent=len.toLocaleString()+' / 10,000';
-  cc.style.color=len>9000?'#e24b4a':'';
-  sb.disabled=len===0;
+// ── 입력 UI (PC + 모바일 공통) ───────────────
+var isMobile = window.innerWidth <= 600;
+
+function getActiveInput() {
+  return isMobile
+    ? document.getElementById('memo-input-m')
+    : document.getElementById('memo-input');
 }
 
+function updateInputUI() {
+  var input = getActiveInput();
+  var len = input ? input.value.length : 0;
+  // PC
+  var cc = document.getElementById('char-count');
+  var sb = document.getElementById('save-btn');
+  if (cc) { cc.textContent = len.toLocaleString()+' / 10,000'; cc.style.color = len>9000?'#e24b4a':''; }
+  if (sb) sb.disabled = (len === 0);
+  // 모바일
+  var ccm = document.getElementById('char-count-m');
+  var sbm = document.getElementById('save-btn-m');
+  if (ccm) { ccm.textContent = len.toLocaleString()+' / 10,000'; ccm.style.color = len>9000?'#e24b4a':''; }
+  if (sbm) sbm.disabled = (len === 0);
+}
+
+// PC 입력창
 document.getElementById('memo-input').addEventListener('input', updateInputUI);
 document.getElementById('memo-input').addEventListener('keydown', function(e){
   if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();addMemo();}
@@ -1622,30 +1655,73 @@ document.getElementById('next-btn').addEventListener('click', function(){
   viewMonth++; if(viewMonth>11){viewMonth=0;viewYear++;} renderCal();
 });
 
+// 모바일 입력창
+document.getElementById('memo-input-m').addEventListener('input', function(){
+  // 모바일 입력창 값을 PC 입력창에도 동기화 (addMemo가 공통으로 씀)
+  document.getElementById('memo-input').value = this.value;
+  updateInputUI();
+});
+document.getElementById('memo-input-m').addEventListener('keydown', function(e){
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();addMemo();}
+});
+document.getElementById('save-btn-m').addEventListener('click', addMemo);
+document.getElementById('prev-btn-m').addEventListener('click', function(){
+  viewMonth--; if(viewMonth<0){viewMonth=11;viewYear--;} renderCal();
+});
+document.getElementById('next-btn-m').addEventListener('click', function(){
+  viewMonth++; if(viewMonth>11){viewMonth=0;viewYear++;} renderCal();
+});
+
+// 모바일 로그아웃
+document.getElementById('logout-btn-m').addEventListener('click', function(){ signOut(auth); });
+
+// 모바일 테마 버튼
+document.getElementById('theme-btn-m').addEventListener('click', function() {
+  applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+  // PC 버튼도 동기화
+  document.getElementById('theme-btn').textContent = currentTheme === 'dark' ? '☀️' : '🌙';
+  document.getElementById('theme-btn-m').textContent = currentTheme === 'dark' ? '☀️' : '🌙';
+});
+
+// 모바일 검색 버튼
+document.getElementById('search-btn-m').addEventListener('click', function() {
+  if (document.getElementById('search-overlay').style.display === 'flex') closeSearch();
+  else openSearch();
+});
+
 // ── 음성 입력 ─────────────────────────────
 (function(){
-  var micBtn=document.getElementById('mic-btn');
-  var micIcon=document.getElementById('mic-icon');
-  var memoInput=document.getElementById('memo-input');
-  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
-  if(!SR){micBtn.style.opacity='.3';micBtn.style.cursor='not-allowed';micBtn.title='Chrome 권장';return;}
-  var recog=new SR(); recog.lang='ko-KR'; recog.continuous=true; recog.interimResults=true;
-  var isRec=false; var baseText='';
-  recog.onresult=function(e){
-    var interim=''; var fin='';
-    for(var i=e.resultIndex;i<e.results.length;i++){
-      var t=e.results[i][0].transcript;
-      if(e.results[i].isFinal)fin+=t; else interim+=t;
-    }
-    if(fin)baseText+=fin;
-    memoInput.value=baseText+interim;
-    updateInputUI();
-  };
-  recog.onerror=function(){ stopRec(); };
-  recog.onend=function(){ if(isRec){try{recog.start();}catch(e){}} };
-  function startRec(){isRec=true;baseText=memoInput.value;micBtn.classList.add('recording');micIcon.className='ti ti-microphone-off';try{recog.start();}catch(e){}}
-  function stopRec(){isRec=false;recog.stop();micBtn.classList.remove('recording');micIcon.className='ti ti-microphone';memoInput.value=baseText;updateInputUI();}
-  micBtn.addEventListener('click',function(){ if(isRec)stopRec(); else startRec(); });
+  // PC용 마이크
+  function setupMic(micBtnId, micIconId, memoInputId) {
+    var micBtn=document.getElementById(micBtnId);
+    var micIcon=document.getElementById(micIconId);
+    var memoInput=document.getElementById(memoInputId);
+    if (!micBtn) return;
+    var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+    if(!SR){micBtn.style.opacity='.3';micBtn.style.cursor='not-allowed';micBtn.title='Chrome 권장';return;}
+    var recog=new SR(); recog.lang='ko-KR'; recog.continuous=true; recog.interimResults=true;
+    var isRec=false; var baseText='';
+    recog.onresult=function(e){
+      var interim=''; var fin='';
+      for(var i=e.resultIndex;i<e.results.length;i++){
+        var t=e.results[i][0].transcript;
+        if(e.results[i].isFinal)fin+=t; else interim+=t;
+      }
+      if(fin)baseText+=fin;
+      memoInput.value=baseText+interim;
+      // 모바일/PC 동기화
+      if(memoInputId==='memo-input-m') document.getElementById('memo-input').value=memoInput.value;
+      else document.getElementById('memo-input-m').value=memoInput.value;
+      updateInputUI();
+    };
+    recog.onerror=function(){ stopRec(); };
+    recog.onend=function(){ if(isRec){try{recog.start();}catch(e){}} };
+    function startRec(){isRec=true;baseText=memoInput.value;micBtn.classList.add('recording');micIcon.className='ti ti-microphone-off';try{recog.start();}catch(e){}}
+    function stopRec(){isRec=false;recog.stop();micBtn.classList.remove('recording');micIcon.className='ti ti-microphone';memoInput.value=baseText;updateInputUI();}
+    micBtn.addEventListener('click',function(){ if(isRec)stopRec(); else startRec(); });
+  }
+  setupMic('mic-btn',   'mic-icon',   'memo-input');
+  setupMic('mic-btn-m', 'mic-icon-m', 'memo-input-m');
 })();
 </script>
 </body>
