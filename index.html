@@ -8,7 +8,9 @@
 <style>
 /* ── 테마 변수 ────────────────────────────── */
 :root {
-  --lines: 18px;             /* 바둑판 칸 크기 */
+  --cell-w: 40px;
+  --cell-h: 42.8px;
+  --margin: 1cm;
 }
 [data-theme="dark"] {
   --bg:        #1a1108;      /* 어두운 나무 */
@@ -80,25 +82,36 @@ body {
   overflow-x: hidden;
 }
 
-/* 바둑판 선 배경 */
+/* 바둑판 선 배경 — 상하좌우 1cm 여백 안에만 그려짐 */
 body::before {
+  content:'';
+  position:fixed;
+  inset: var(--margin);          /* 상하좌우 1cm 공백 */
+  background-color: transparent;
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: var(--cell-w) var(--cell-h);
+  background-position: 0px 0px;
+  z-index:0;
+  transition: background .4s;
+  border: 0.5px solid var(--line); /* 바둑판 외곽선 */
+}
+
+/* 배경 바탕색은 body 자체에 */
+body::after {
   content:'';
   position:fixed;
   inset:0;
   background-color: var(--bg);
-  background-image:
-    linear-gradient(var(--line) 1px, transparent 1px),
-    linear-gradient(90deg, var(--line) 1px, transparent 1px);
-  background-size: var(--lines) var(--lines);
-  background-position: 9px 9px;
-  z-index:0;
+  z-index:-1;
   transition: background .4s;
 }
 
-/* 바둑알 캔버스 (배경에 떠있는 돌들) */
+/* 바둑알 캔버스 — 격자 영역 안에만 */
 #stone-canvas {
   position:fixed;
-  inset:0;
+  inset: var(--margin);
   pointer-events:none;
   z-index:1;
 }
@@ -462,20 +475,24 @@ function fibStoneCount(memoCount) {
 }
 
 function resizeCanvas() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  // 1cm = 37.8px 기준으로 여백 제외한 영역
+  var margin = Math.round(37.8);
+  canvas.width  = window.innerWidth  - margin * 2;
+  canvas.height = window.innerHeight - margin * 2;
   drawStones();
 }
 
-var GRID = 18;
+var GRID_W = 40;
+var GRID_H = 42.8;
 
 function getGridPoints() {
   var pts = [];
-  var cols = Math.floor(window.innerWidth / GRID);
-  var rows = Math.floor(window.innerHeight / GRID);
-  for (var r = 1; r < rows; r++)
-    for (var c = 1; c < cols; c++)
-      pts.push({ x: c * GRID + 9, y: r * GRID + 9 });
+  var W = canvas.width;
+  var H = canvas.height;
+  // 격자 교차점에 돌 배치
+  for (var r = 0; r * GRID_H <= H; r++)
+    for (var c = 0; c * GRID_W <= W; c++)
+      pts.push({ x: Math.round(c * GRID_W), y: Math.round(r * GRID_H) });
   return pts;
 }
 
@@ -613,8 +630,9 @@ function updateStones(memoCount, playSound) {
 }
 
 window.addEventListener('resize', function() {
-  canvas.width = window.innerWidth;
-  canvas.height = window.innerHeight;
+  var margin = Math.round(37.8);
+  canvas.width  = window.innerWidth  - margin * 2;
+  canvas.height = window.innerHeight - margin * 2;
   rebuildStones(lastStoneCount);
   drawStones();
 });
