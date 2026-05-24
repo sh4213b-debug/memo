@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>메모 앱</title>
+<title>나의 정수를 위한 새김</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <style>
 /* ── 테마 변수 ────────────────────────────── */
@@ -331,7 +331,7 @@ textarea::placeholder{color:var(--ui-muted)}
 <div class="app" id="login-view" style="display:none">
   <div class="login-screen">
     <div class="login-logo">⚫</div>
-    <div class="login-title">메모 앱</div>
+    <div class="login-title">나의 정수를 위한 새김</div>
     <div class="login-sub">Google 계정으로 로그인하면<br>어디서든 내 메모를 볼 수 있어요</div>
     <button class="google-btn" id="google-login-btn">
       <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
@@ -528,7 +528,8 @@ function drawOneStone(x, y, r, isWhite) {
 function drawStones() {
   if (!canvas) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  var r = 7;
+  // 격자 칸 40×42.8px의 97% → 짧은 변(40) 기준 반지름
+  var r = Math.round((40 * 0.97) / 2); // ≈ 19px
   for (var i = 0; i < stonePositions.length; i++) {
     var p = stonePositions[i];
     drawOneStone(p.x, p.y, r, p.white);
