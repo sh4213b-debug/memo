@@ -318,7 +318,88 @@ textarea::placeholder{color:var(--ui-muted)}
 }
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 
-/* ── 모바일 반응형 ────────────────────────── */
+/* ── 검색 버튼 ────────────────────────────── */
+.search-btn{
+  background:none;border:0.5px solid var(--ui-border);border-radius:6px;
+  color:var(--ui-sub);padding:4px 8px;font-size:14px;cursor:pointer;
+  transition:color .12s,border-color .12s,transform .1s;
+  line-height:1;display:flex;align-items:center;
+}
+.search-btn:hover{color:var(--ui-text);border-color:var(--ui-sub);transform:scale(1.08)}
+.search-btn.active{color:var(--related-kw);border-color:var(--related-kw)}
+
+/* ── 검색 오버레이 ────────────────────────── */
+.search-overlay{
+  position:fixed;inset:0;background:rgba(0,0,0,.55);
+  z-index:500;display:flex;align-items:flex-start;justify-content:center;
+  padding-top:5rem;backdrop-filter:blur(4px);
+  animation:fadeIn .15s ease;
+}
+.search-modal{
+  background:var(--dialog-bg);border-radius:14px;
+  width:min(560px, 90vw);
+  box-shadow:0 16px 48px rgba(0,0,0,.4);
+  overflow:hidden;
+}
+.search-modal-row{
+  display:flex;align-items:center;gap:.75rem;
+  padding:.875rem 1.125rem;
+}
+.search-input{
+  flex:1;background:transparent;border:none;outline:none;
+  font-size:16px;color:var(--dialog-text);font-family:inherit;
+}
+.search-input::placeholder{color:var(--dialog-sub)}
+.search-close-btn{
+  background:none;border:none;cursor:pointer;
+  color:var(--dialog-sub);font-size:16px;padding:2px 4px;
+  border-radius:4px;transition:color .12s;line-height:1;flex-shrink:0;
+}
+.search-close-btn:hover{color:var(--dialog-text)}
+
+/* ── 검색 결과 패널 ───────────────────────── */
+.search-panel{
+  margin-bottom:1.25rem;
+  animation:fadeIn .18s ease;
+}
+.search-panel-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:.625rem;
+}
+.search-result-label{font-size:11px;color:var(--ui-sub);letter-spacing:.04em}
+.search-panel-close{
+  background:none;border:none;cursor:pointer;color:var(--ui-muted);
+  font-size:14px;padding:2px 4px;border-radius:4px;transition:color .12s;
+}
+.search-panel-close:hover{color:var(--ui-text)}
+.search-result-list{display:flex;flex-direction:column;gap:.5rem}
+.search-result-card{
+  background:var(--card-bg);border:0.5px solid var(--card-border);
+  border-radius:12px;padding:.75rem 1rem;
+  display:flex;align-items:flex-start;gap:.75rem;
+  cursor:pointer;transition:border-color .12s;
+  animation:fadeIn .15s ease;
+}
+.search-result-card:hover{border-color:var(--related-kw)}
+.search-result-content{flex:1;min-width:0}
+.search-result-date{font-size:11px;color:var(--related-kw);margin-bottom:.25rem;font-weight:500}
+.search-result-text{
+  font-size:13px;color:var(--ui-text);line-height:1.65;
+  word-break:break-word;white-space:pre-wrap;
+  display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;
+}
+.search-result-text mark{
+  background:rgba(200,185,122,.35);color:inherit;
+  border-radius:2px;padding:0 1px;font-style:normal;
+}
+.search-no-result{font-size:13px;color:var(--ui-muted);padding:.75rem 0;text-align:center}
+
+/* 모바일 검색 */
+@media(max-width:600px){
+  .search-overlay{padding-top:3rem}
+  .search-modal{width:92vw}
+  .search-input{font-size:16px}
+}
 @media (max-width: 600px) {
   :root {
     --margin: 0.4cm;
@@ -464,6 +545,7 @@ textarea::placeholder{color:var(--ui-muted)}
     </div>
     <div class="header-right">
       <button class="theme-btn" id="theme-btn" title="테마 전환">☀️</button>
+      <button class="search-btn" id="search-btn" title="메모 검색"><i class="ti ti-search"></i></button>
       <button class="export-btn" id="export-btn" title="전체 메모 txt로 내보내기"><i class="ti ti-download"></i></button>
       <button class="export-btn" id="import-btn" title="txt 파일로 메모 가져오기"><i class="ti ti-upload"></i></button>
       <input type="file" id="import-file" accept=".txt" style="display:none">
@@ -512,6 +594,26 @@ textarea::placeholder{color:var(--ui-muted)}
   <div id="memo-panel" style="display:none">
     <div class="memo-panel-title" id="panel-title"></div>
     <div class="memo-list" id="memo-list"></div>
+  </div>
+
+  <!-- 검색 결과 패널 -->
+  <div class="search-panel" id="search-panel" style="display:none">
+    <div class="search-panel-header">
+      <div class="search-result-label" id="search-result-label"></div>
+      <button class="search-panel-close" id="search-panel-close"><i class="ti ti-x"></i></button>
+    </div>
+    <div class="search-result-list" id="search-result-list"></div>
+  </div>
+</div>
+
+<!-- 검색 오버레이 -->
+<div class="search-overlay" id="search-overlay" style="display:none">
+  <div class="search-modal">
+    <div class="search-modal-row">
+      <i class="ti ti-search" style="font-size:16px;color:var(--ui-muted);flex-shrink:0" aria-hidden="true"></i>
+      <input class="search-input" id="search-input" type="text" placeholder="검색어를 입력하세요..." autocomplete="off" maxlength="100">
+      <button class="search-close-btn" id="search-close-btn"><i class="ti ti-x"></i></button>
+    </div>
   </div>
 </div>
 
@@ -1063,6 +1165,7 @@ onAuthStateChanged(auth, function(user){
     document.getElementById('related-panel').style.display='none';
     document.getElementById('memo-list').innerHTML='';
     document.getElementById('related-list').innerHTML='';
+    clearSearchUI();
     showView('login');
   }
 });
@@ -1073,6 +1176,141 @@ document.getElementById('google-login-btn').addEventListener('click', async func
   catch(e){ console.error(e); err.style.display='block'; }
 });
 document.getElementById('logout-btn').addEventListener('click', function(){ signOut(auth); });
+
+// ── 검색 ──────────────────────────────────
+var searchActive = false;
+
+function openSearch() {
+  searchActive = true;
+  document.getElementById('search-overlay').style.display = 'flex';
+  document.getElementById('search-btn').classList.add('active');
+  setTimeout(function(){ document.getElementById('search-input').focus(); }, 80);
+}
+
+function closeSearch() {
+  searchActive = false;
+  document.getElementById('search-overlay').style.display = 'none';
+  document.getElementById('search-input').value = '';
+  document.getElementById('search-btn').classList.remove('active');
+}
+
+function escapeRegex(s) {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+function highlightText(text, query) {
+  var re = new RegExp('(' + escapeRegex(query) + ')', 'gi');
+  var div = document.createElement('div');
+  div.className = 'search-result-text';
+  // 하이라이트를 위해 파트로 분리
+  var parts = text.split(re);
+  for (var i = 0; i < parts.length; i++) {
+    if (re.test(parts[i])) {
+      var mark = document.createElement('mark');
+      mark.textContent = parts[i];
+      div.appendChild(mark);
+    } else {
+      div.appendChild(document.createTextNode(parts[i]));
+    }
+    re.lastIndex = 0;
+  }
+  return div;
+}
+
+function runSearch(query) {
+  var panel = document.getElementById('search-panel');
+  var list  = document.getElementById('search-result-list');
+  var label = document.getElementById('search-result-label');
+  query = query.trim();
+
+  if (!query) {
+    panel.style.display = 'none';
+    return;
+  }
+
+  var q = query.toLowerCase();
+  var matched = allMemos.filter(function(m){
+    return m.text.toLowerCase().indexOf(q) !== -1;
+  }).sort(function(a,b){ return b.ts - a.ts; });
+
+  list.innerHTML = '';
+
+  if (matched.length === 0) {
+    label.textContent = '"' + query + '" 검색 결과 없음';
+    var empty = document.createElement('div');
+    empty.className = 'search-no-result';
+    empty.textContent = '일치하는 메모가 없어요';
+    list.appendChild(empty);
+  } else {
+    label.textContent = '"' + query + '" 검색 결과 ' + matched.length + '개';
+    matched.forEach(function(memo) {
+      var dt = new Date(memo.ts);
+      var dateStr = dt.getFullYear()+'년 '+(dt.getMonth()+1)+'월 '+dt.getDate()+'일';
+      var hh = String(dt.getHours()).padStart(2,'0');
+      var mm = String(dt.getMinutes()).padStart(2,'0');
+
+      var card = document.createElement('div');
+      card.className = 'search-result-card';
+
+      var content = document.createElement('div');
+      content.className = 'search-result-content';
+
+      var dateEl = document.createElement('div');
+      dateEl.className = 'search-result-date';
+      dateEl.textContent = dateStr + ' ' + hh + ':' + mm;
+
+      content.appendChild(dateEl);
+      content.appendChild(highlightText(memo.text, query));
+      card.appendChild(content);
+
+      // 클릭 시 해당 날짜로 이동
+      (function(d) {
+        card.addEventListener('click', function() {
+          var k = dateKey(d);
+          viewYear = d.getFullYear();
+          viewMonth = d.getMonth();
+          renderCal();
+          selectDay(k, d.getDate());
+          // 검색 패널 닫기
+          panel.style.display = 'none';
+          document.getElementById('search-btn').classList.remove('active');
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+      })(dt);
+
+      list.appendChild(card);
+    });
+  }
+
+  panel.style.display = 'block';
+}
+
+document.getElementById('search-btn').addEventListener('click', function() {
+  if (document.getElementById('search-overlay').style.display === 'flex') closeSearch();
+  else openSearch();
+});
+document.getElementById('search-close-btn').addEventListener('click', closeSearch);
+document.getElementById('search-overlay').addEventListener('click', function(e) {
+  if (e.target === this) closeSearch();
+});
+document.getElementById('search-input').addEventListener('input', function() {
+  runSearch(this.value);
+});
+document.getElementById('search-input').addEventListener('keydown', function(e) {
+  if (e.key === 'Escape') closeSearch();
+  if (e.key === 'Enter') { closeSearch(); }
+});
+document.getElementById('search-panel-close').addEventListener('click', function() {
+  document.getElementById('search-panel').style.display = 'none';
+  document.getElementById('search-btn').classList.remove('active');
+});
+
+// 로그아웃 시 검색 패널도 초기화
+function clearSearchUI() {
+  document.getElementById('search-panel').style.display = 'none';
+  document.getElementById('search-result-list').innerHTML = '';
+  closeSearch();
+}
 
 // ── txt 내보내기 ──────────────────────────
 document.getElementById('export-btn').addEventListener('click', function() {
