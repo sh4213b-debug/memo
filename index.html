@@ -780,7 +780,12 @@ function selectDay(k,d) {
   var memoPanel=document.getElementById('memo-panel');
   var panelTitle=document.getElementById('panel-title');
   var memoList=document.getElementById('memo-list');
-  panelTitle.textContent=parts[0]+'년 '+MONTHS[parseInt(parts[1])-1]+' '+parseInt(parts[2])+'일 — 메모 '+memos.length+'개';
+
+  // 이 날짜 이전(포함)까지 저장된 누적 메모 수 계산
+  var dayEnd = new Date(parseInt(parts[0]), parseInt(parts[1])-1, parseInt(parts[2]), 23, 59, 59, 999).getTime();
+  var cumulative = allMemos.filter(function(m){ return m.ts <= dayEnd; }).length;
+
+  panelTitle.textContent = parts[0]+'년 '+MONTHS[parseInt(parts[1])-1]+' '+parseInt(parts[2])+'일 — 제 '+cumulative+'수';
   memoList.innerHTML='';
   if (memos.length===0){
     var e=document.createElement('div'); e.className='empty-day'; e.textContent='이 날엔 메모가 없어요'; memoList.appendChild(e);
