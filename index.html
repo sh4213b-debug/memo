@@ -64,8 +64,20 @@ textarea::placeholder{color:#3a3a3a}
 .del-btn:hover{color:#e24b4a;background:#1f1414}
 .empty-day{font-size:13px;color:#333;padding:.75rem 0;text-align:center}
 .loading{display:flex;align-items:center;justify-content:center;min-height:80vh;font-size:14px;color:#444}
+
+/* 커스텀 확인 다이얼로그 */
+.dialog-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:1000;animation:fadeIn .15s ease}
+.dialog-box{background:#1e1e1e;border:0.5px solid #333;border-radius:14px;padding:1.5rem 1.75rem;max-width:320px;width:90%;text-align:center}
+.dialog-msg{font-size:15px;color:#e8e6e0;margin-bottom:1.25rem;line-height:1.6}
+.dialog-btns{display:flex;gap:.75rem;justify-content:center}
+.dialog-btn{padding:8px 24px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;border:none;font-family:inherit;transition:opacity .12s}
+.dialog-btn.cancel{background:#2a2a2a;color:#888}
+.dialog-btn.cancel:hover{opacity:.8}
+.dialog-btn.confirm{background:#e24b4a;color:#fff}
+.dialog-btn.confirm:hover{opacity:.85}
+
 /* 연관 메모 패널 */
-.related-panel{background:#16161e;border:0.5px solid #2e2a4a;border-radius:12px;padding:1rem 1.25rem;margin-bottom:1.5rem;animation:fadeIn .2s ease}
+.related-panel{background:#16161e;border:0.5px solid #2e2a4a;border-radius:12px;padding:1rem 1.25rem;margin-top:1.25rem;animation:fadeIn .2s ease}
 .related-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem}
 .related-title{font-size:12px;color:#8b87c4;font-weight:500;display:flex;align-items:center;gap:.4rem}
 .related-title i{font-size:14px}
@@ -75,9 +87,8 @@ textarea::placeholder{color:#3a3a3a}
 .related-card{background:#1a1828;border:0.5px solid #2e2a4a;border-radius:8px;padding:.625rem .875rem;cursor:pointer;transition:border-color .12s}
 .related-card:hover{border-color:#534AB7}
 .related-card-text{font-size:12px;color:#9896b8;line-height:1.55;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.related-card-meta{font-size:11px;color:#3a3860;margin-top:.3rem;display:flex;align-items:center;gap:.4rem}
+.related-card-meta{font-size:11px;color:#3a3860;margin-top:.3rem}
 .related-card-keywords{font-size:10px;color:#534AB7;margin-top:.25rem}
-.related-keywords-label{font-size:10px;color:#444;display:inline}
 </style>
 </head>
 <body>
@@ -138,13 +149,23 @@ textarea::placeholder{color:#3a3a3a}
     <div class="memo-list" id="memo-list"></div>
   </div>
 
-  <!-- 연관 메모 패널 -->
   <div class="related-panel" id="related-panel" style="display:none">
     <div class="related-header">
       <div class="related-title"><i class="ti ti-link"></i> 연관된 과거의 기록이 있습니다</div>
-      <button class="related-close" id="related-close" aria-label="닫기"><i class="ti ti-x"></i></button>
+      <button class="related-close" id="related-close"><i class="ti ti-x"></i></button>
     </div>
     <div class="related-list" id="related-list"></div>
+  </div>
+</div>
+
+<!-- 커스텀 삭제 확인 다이얼로그 -->
+<div class="dialog-overlay" id="dialog-overlay" style="display:none">
+  <div class="dialog-box">
+    <div class="dialog-msg">이 메모를 정말 삭제하시겠습니까?</div>
+    <div class="dialog-btns">
+      <button class="dialog-btn cancel" id="dialog-cancel">취소</button>
+      <button class="dialog-btn confirm" id="dialog-confirm">삭제</button>
+    </div>
   </div>
 </div>
 
@@ -180,6 +201,25 @@ let currentUser = null;
 let allMemos = [];
 let unsubscribe = null;
 
+// ── 커스텀 다이얼로그 ──────────────────────────────
+let dialogResolve = null;
+const dialogOverlay = document.getElementById('dialog-overlay');
+document.getElementById('dialog-confirm').addEventListener('click', () => {
+  dialogOverlay.style.display = 'none';
+  if (dialogResolve) { dialogResolve(true); dialogResolve = null; }
+});
+document.getElementById('dialog-cancel').addEventListener('click', () => {
+  dialogOverlay.style.display = 'none';
+  if (dialogResolve) { dialogResolve(false); dialogResolve = null; }
+});
+function showConfirm() {
+  return new Promise(resolve => {
+    dialogResolve = resolve;
+    dialogOverlay.style.display = 'flex';
+  });
+}
+
+// ── 유틸 ──────────────────────────────────────────
 function showView(name) {
   ['loading-view','login-view','app-view'].forEach(id => {
     document.getElementById(id).style.display = (id === name+'-view') ? 'block' : 'none';
@@ -190,6 +230,74 @@ function dateKey(d) {
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 
+// ── 키워드 추출 ───────────────────────────────────
+const STOPWORDS = new Set([
+  '이','그','저','것','수','을','를','가','은','는','에','의','로','으로',
+  '와','과','도','만','에서','까지','부터','에게','처럼','같이','보다',
+  '이다','있다','없다','하다','되다','그리고','하지만','그러나','또한',
+  '그래서','따라서','및','등','들','습니다','합니다','했다','한다','할','하는',
+  '된','위해','통해','대한','있는','없는','같은','다른','더','가장','매우',
+  '정말','너무','아주','많이','모든','각','여러','한','두','세','오늘','어제',
+  '내일','지금','때','일','년','월','시','분','이번','다음','지난'
+]);
+
+function extractKeywords(text) {
+  const words = text
+    .replace(/[^가-힣a-zA-Z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .map(w => w.trim().toLowerCase())
+    .filter(w => w.length >= 2 && !STOPWORDS.has(w));
+  return [...new Set(words)];
+}
+
+function findRelatedMemos(newText, savedTs) {
+  const newKws = extractKeywords(newText);
+  if (newKws.length === 0) return [];
+  const newSet = new Set(newKws);
+  const results = [];
+  allMemos.forEach(memo => {
+    if (memo.ts === savedTs) return;
+    const memoKws = extractKeywords(memo.text);
+    const matched = memoKws.filter(k => newSet.has(k));
+    if (matched.length >= 2) results.push({ memo, matched });
+  });
+  results.sort((a, b) => b.matched.length - a.matched.length);
+  return results.slice(0, 5);
+}
+
+function showRelatedPanel(results) {
+  const panel = document.getElementById('related-panel');
+  const list = document.getElementById('related-list');
+  if (results.length === 0) { panel.style.display = 'none'; return; }
+  list.innerHTML = '';
+  results.forEach(({ memo, matched }) => {
+    const dt = new Date(memo.ts);
+    const dateStr = dt.getFullYear()+'년 '+MONTHS[dt.getMonth()]+' '+dt.getDate()+'일';
+    const hh = String(dt.getHours()).padStart(2,'0');
+    const mm = String(dt.getMinutes()).padStart(2,'0');
+    const card = document.createElement('div');
+    card.className = 'related-card';
+    card.innerHTML =
+      '<div class="related-card-text"></div>'+
+      '<div class="related-card-meta">'+dateStr+' '+hh+':'+mm+'</div>'+
+      '<div class="related-card-keywords">공통 키워드: '+matched.join(', ')+'</div>';
+    card.querySelector('.related-card-text').textContent = memo.text;
+    card.addEventListener('click', () => {
+      const k = dateKey(dt);
+      viewYear = dt.getFullYear(); viewMonth = dt.getMonth();
+      renderCal(); selectDay(k, dt.getDate());
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+    list.appendChild(card);
+  });
+  panel.style.display = 'block';
+}
+
+document.getElementById('related-close').addEventListener('click', () => {
+  document.getElementById('related-panel').style.display = 'none';
+});
+
+// ── 달력 ──────────────────────────────────────────
 function activeDates() {
   const s = new Set();
   allMemos.forEach(m => s.add(dateKey(new Date(m.ts))));
@@ -223,10 +331,9 @@ function renderCal() {
   }
 }
 
+// ── 메모 패널 ─────────────────────────────────────
 function selectDay(k, d) {
-  selectedKey = k;
-  renderCal();
-  // ts 기준으로 클라이언트에서 정렬
+  selectedKey = k; renderCal();
   const memos = allMemos
     .filter(m => dateKey(new Date(m.ts)) === k)
     .sort((a, b) => b.ts - a.ts);
@@ -238,19 +345,20 @@ function selectDay(k, d) {
   memoList.innerHTML = '';
   if (memos.length === 0) {
     const e = document.createElement('div');
-    e.className = 'empty-day';
-    e.textContent = '이 날엔 메모가 없어요';
-    memoList.appendChild(e);
+    e.className = 'empty-day'; e.textContent = '이 날엔 메모가 없어요'; memoList.appendChild(e);
   } else {
     memos.forEach(memo => {
       const card = document.createElement('div'); card.className = 'memo-card';
       const dt = new Date(memo.ts);
       const hh = String(dt.getHours()).padStart(2,'0');
       const mm = String(dt.getMinutes()).padStart(2,'0');
-      card.innerHTML = '<div class="memo-content"><div class="memo-text"></div><div class="memo-time">'+hh+':'+mm+'</div></div><button class="del-btn" aria-label="삭제"><i class="ti ti-x"></i></button>';
+      card.innerHTML =
+        '<div class="memo-content"><div class="memo-text"></div><div class="memo-time">'+hh+':'+mm+'</div></div>'+
+        '<button class="del-btn" aria-label="삭제"><i class="ti ti-x"></i></button>';
       card.querySelector('.memo-text').textContent = memo.text;
       card.querySelector('.del-btn').addEventListener('click', async () => {
-        if (!confirm('이 메모를 정말 삭제하시겠습니까?')) return;
+        const ok = await showConfirm();
+        if (!ok) return;
         await deleteDoc(doc(db, 'memos', memo.id));
       });
       memoList.appendChild(card);
@@ -259,9 +367,9 @@ function selectDay(k, d) {
   memoPanel.style.display = 'block';
 }
 
+// ── Firestore 구독 ────────────────────────────────
 function subscribeToMemos(uid) {
   if (unsubscribe) unsubscribe();
-  // orderBy 제거 → 복합 인덱스 불필요, 클라이언트에서 정렬
   const q = query(collection(db, 'memos'), where('uid', '==', uid));
   unsubscribe = onSnapshot(q, snapshot => {
     allMemos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -271,84 +379,21 @@ function subscribeToMemos(uid) {
       if (still) selectDay(selectedKey, parseInt(selectedKey.split('-')[2]));
       else { document.getElementById('memo-panel').style.display = 'none'; selectedKey = null; }
     }
-  }, err => {
-    console.error('Firestore 오류:', err);
-  });
+  }, err => console.error('Firestore 오류:', err));
 }
 
-// 불용어 (비교에서 제외할 짧거나 의미없는 단어)
-const STOPWORDS = new Set(['이','그','저','것','수','을','를','이','가','은','는','에','의','로','으로','와','과','도','만','에서','까지','부터','으로서','에게','한테','께','처럼','같이','보다','에도','에서도','이다','있다','없다','하다','되다','이고','이며','그리고','하지만','그러나','또한','그래서','따라서','즉','및','등','들','것이다','습니다','합니다','있습니다','없습니다','했다','했습니다','한다','할','하는','된','되는','위해','통해','대한','관한','있는','없는','같은','다른','더','가장','매우','정말','너무','아주','조금','많이','모든','각','여러','몇','한','두','세','네','다섯']);
-
-function extractKeywords(text) {
-  // 2글자 이상 단어 추출, 숫자/특수문자 제거, 불용어 제거
-  return [...new Set(
-    text.replace(/[^\w가-힣\s]/g, ' ')
-      .split(/\s+/)
-      .map(w => w.trim())
-      .filter(w => w.length >= 2 && !STOPWORDS.has(w))
-  )];
-}
-
-function findRelatedMemos(newText, excludeTs) {
-  const newKeywords = extractKeywords(newText);
-  if (newKeywords.length === 0) return [];
-  const newSet = new Set(newKeywords);
-  const results = [];
-  allMemos.forEach(memo => {
-    if (memo.ts === excludeTs) return; // 방금 저장한 메모 제외
-    const memoKeywords = extractKeywords(memo.text);
-    const matched = memoKeywords.filter(k => newSet.has(k));
-    if (matched.length >= 2) {
-      results.push({ memo, matched });
-    }
-  });
-  // 매칭 키워드 많은 순으로 정렬
-  results.sort((a, b) => b.matched.length - a.matched.length);
-  return results.slice(0, 5); // 최대 5개
-}
-
-function showRelatedPanel(results) {
-  const panel = document.getElementById('related-panel');
-  const list = document.getElementById('related-list');
-  if (results.length === 0) { panel.style.display = 'none'; return; }
-  list.innerHTML = '';
-  results.forEach(({ memo, matched }) => {
-    const dt = new Date(memo.ts);
-    const dateStr = dt.getFullYear()+'년 '+MONTHS[dt.getMonth()]+'월 '+dt.getDate()+'일';
-    const hh = String(dt.getHours()).padStart(2,'0');
-    const mm = String(dt.getMinutes()).padStart(2,'0');
-    const card = document.createElement('div');
-    card.className = 'related-card';
-    card.innerHTML =
-      '<div class="related-card-text"></div>'+
-      '<div class="related-card-meta"><i class="ti ti-calendar" style="font-size:11px"></i>'+dateStr+' '+hh+':'+mm+'</div>'+
-      '<div class="related-card-keywords">공통 키워드: '+matched.join(', ')+'</div>';
-    card.querySelector('.related-card-text').textContent = memo.text;
-    // 클릭하면 해당 날짜로 이동
-    card.addEventListener('click', () => {
-      const k = dateKey(dt);
-      viewYear = dt.getFullYear(); viewMonth = dt.getMonth();
-      renderCal();
-      selectDay(k, dt.getDate());
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-    list.appendChild(card);
-  });
-  panel.style.display = 'block';
-}
-
-document.getElementById('related-close').addEventListener('click', () => {
-  document.getElementById('related-panel').style.display = 'none';
-});
-
+// ── 메모 저장 ─────────────────────────────────────
 async function addMemo() {
   const input = document.getElementById('memo-input');
   const text = input.value.trim();
   if (!text || !currentUser) return;
-  const newTs = Date.now();
-  await addDoc(collection(db, 'memos'), { uid: currentUser.uid, text, ts: newTs });
-  // 저장 직후 연관 메모 검색 (저장된 메모 제외)
-  const related = findRelatedMemos(text, newTs);
+
+  // 저장 전에 연관 메모 먼저 계산 (allMemos 기준)
+  const related = findRelatedMemos(text, null);
+
+  const savedTs = Date.now();
+  await addDoc(collection(db, 'memos'), { uid: currentUser.uid, text, ts: savedTs });
+
   input.value = '';
   document.getElementById('char-count').textContent = '0 / 10,000';
   document.getElementById('char-count').style.color = '#444';
@@ -361,6 +406,7 @@ async function addMemo() {
   showRelatedPanel(related);
 }
 
+// ── 인증 ──────────────────────────────────────────
 onAuthStateChanged(auth, user => {
   if (user) {
     currentUser = user;
@@ -385,9 +431,7 @@ document.getElementById('google-login-btn').addEventListener('click', async () =
   catch(e) { console.error(e); err.style.display = 'block'; }
 });
 
-document.getElementById('logout-btn').addEventListener('click', async () => {
-  await signOut(auth);
-});
+document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
 
 document.getElementById('memo-input').addEventListener('input', () => {
   const input = document.getElementById('memo-input');
@@ -400,7 +444,6 @@ document.getElementById('memo-input').addEventListener('input', () => {
   sb.style.background = len === 0 ? '#2a2a2a' : '#e8e6e0';
   sb.querySelector('i').style.color = len === 0 ? '#484848' : '#0f0f0f';
 });
-
 document.getElementById('memo-input').addEventListener('keydown', e => {
   if ((e.ctrlKey||e.metaKey) && e.key==='Enter') { e.preventDefault(); addMemo(); }
 });
