@@ -155,13 +155,13 @@ textarea::placeholder{color:var(--ui-muted)}
 .save-stone{
   width:42px;height:42px;
   border-radius:50%;
-  background: radial-gradient(circle at 35% 35%, var(--stone-hl), var(--btn-bg) 60%, color-mix(in srgb, var(--btn-bg) 70%, black));
+  background: var(--btn-bg);
   border:none;cursor:pointer;
   display:flex;align-items:center;justify-content:center;
   flex-shrink:0;
   transition:transform .12s,opacity .12s;
   margin-top:2px;padding:0;
-  box-shadow: 2px 4px 10px var(--stone-sh), inset 0 -2px 4px rgba(0,0,0,.2);
+  box-shadow: 2px 3px 8px var(--stone-sh);
 }
 .save-stone:hover{transform:scale(1.08)}
 .save-stone:active{transform:scale(.93)}
@@ -200,9 +200,9 @@ textarea::placeholder{color:var(--ui-muted)}
 }
 /* 메모 있는 날 = 바둑알 */
 .mcal-day.active{
-  background: radial-gradient(circle at 35% 30%, var(--stone-hl), var(--btn-bg) 60%, color-mix(in srgb,var(--btn-bg) 65%,black));
+  background: var(--btn-bg);
   color:var(--btn-icon);cursor:pointer;font-weight:600;font-size:8px;
-  box-shadow:1px 2px 5px var(--stone-sh);
+  box-shadow:1px 2px 4px var(--stone-sh);
 }
 .mcal-day.active:hover{transform:scale(1.15)}
 .mcal-day.today{color:var(--ui-sub);outline:1px solid var(--ui-muted);outline-offset:-1px}
@@ -397,7 +397,25 @@ document.getElementById('theme-btn').addEventListener('click', function() {
 // ── 바둑알 캔버스 ─────────────────────────
 var canvas = document.getElementById('stone-canvas');
 var ctx = canvas.getContext('2d');
+// 각 돌: { x, y, color:'black'|'white' }
 var stonePositions = [];
+var usedPoints = {}; // 이미 사용된 격자점
+
+// 피보나치 수열 미리 생성 (최대 300번째까지)
+var FIB = [1, 1];
+for (var _f = 2; _f < 300; _f++) FIB.push(FIB[_f-1] + FIB[_f-2]);
+// FIB[n] = n+1번째 피보나치 수
+// memoCount가 FIB[k] 이상이면 k+1번째까지 돌을 놓음
+
+function fibStoneCount(memoCount) {
+  // memoCount에 해당하는 피보나치 달성 횟수 = 돌 수
+  var count = 0;
+  for (var i = 0; i < FIB.length; i++) {
+    if (memoCount >= FIB[i]) count = i + 1;
+    else break;
+  }
+  return Math.min(count, 150);
+}
 
 function resizeCanvas() {
   canvas.width = window.innerWidth;
@@ -405,69 +423,157 @@ function resizeCanvas() {
   drawStones();
 }
 
-function getStoneColor() {
-  return currentTheme === 'dark'
-    ? { base:'#f0ede8', hl:'rgba(255,255,255,.75)', sh:'rgba(0,0,0,.6)' }
-    : { base:'#1a1208', hl:'rgba(255,255,255,.22)', sh:'rgba(0,0,0,.45)' };
+var GRID = 18;
+
+function getGridPoints() {
+  var pts = [];
+  var cols = Math.floor(window.innerWidth / GRID);
+  var rows = Math.floor(window.innerHeight / GRID);
+  for (var r = 1; r < rows; r++)
+    for (var c = 1; c < cols; c++)
+      pts.push({ x: c * GRID + 9, y: r * GRID + 9 });
+  return pts;
 }
 
-function drawOneStone(x, y, r, col) {
-  // 그림자
+function shuffle(arr) {
+  for (var i = arr.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i + 1));
+    var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+  }
+  return arr;
+}
+
+function ptKey(p) { return p.x + ',' + p.y; }
+
+function drawOneStone(x, y, r, isWhite) {
   ctx.save();
-  ctx.shadowColor = col.sh;
-  ctx.shadowBlur = r * 1.2;
-  ctx.shadowOffsetX = r * 0.3;
-  ctx.shadowOffsetY = r * 0.5;
-  // 돌 본체
-  var grad = ctx.createRadialGradient(x - r*0.3, y - r*0.3, r*0.05, x, y, r);
-  grad.addColorStop(0, col.hl);
-  grad.addColorStop(0.45, col.base);
-  grad.addColorStop(1, currentTheme === 'dark' ? '#c8c4be' : '#0a0804');
+  ctx.shadowColor = 'rgba(0,0,0,' + (isWhite ? '.45' : '.6') + ')';
+  ctx.shadowBlur = r * 1.1;
+  ctx.shadowOffsetX = r * 0.25;
+  ctx.shadowOffsetY = r * 0.45;
   ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI*2);
-  ctx.fillStyle = grad;
+  ctx.arc(x, y, r, 0, Math.PI * 2);
+  ctx.fillStyle = isWhite ? '#f0ede8' : '#1a1208';
   ctx.fill();
+  // 테두리 (흰돌은 옅은 회색, 흑돌은 없음)
+  if (isWhite) {
+    ctx.strokeStyle = 'rgba(0,0,0,.15)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  }
   ctx.restore();
 }
 
 function drawStones() {
   if (!canvas) return;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
-  var col = getStoneColor();
   var r = 7;
   for (var i = 0; i < stonePositions.length; i++) {
     var p = stonePositions[i];
-    drawOneStone(p.x, p.y, r, col);
+    drawOneStone(p.x, p.y, r, p.white);
   }
 }
 
-function generateStonePositions(count) {
-  // 바둑판 격자점에 랜덤 배치 (겹치지 않게)
-  var gridSize = 18;
-  var cols = Math.floor(window.innerWidth / gridSize);
-  var rows = Math.floor(window.innerHeight / gridSize);
-  var allPoints = [];
-  for (var r = 1; r < rows; r++) {
-    for (var c = 1; c < cols; c++) {
-      allPoints.push({ x: c * gridSize + 9, y: r * gridSize + 9 });
+// 착수 소리 (Web Audio API)
+var audioCtx = null;
+function playStoneSound(isWhite) {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // 딱! 소리: 짧은 노이즈 버스트 + 빠른 감쇠
+    var bufLen = audioCtx.sampleRate * 0.08;
+    var buf = audioCtx.createBuffer(1, bufLen, audioCtx.sampleRate);
+    var data = buf.getChannelData(0);
+    for (var i = 0; i < bufLen; i++) {
+      // 초기 임팩트 피크 + 빠른 감쇠
+      var env = Math.exp(-i / (audioCtx.sampleRate * 0.012));
+      data[i] = (Math.random() * 2 - 1) * env;
     }
-  }
-  // 셔플
-  for (var i = allPoints.length - 1; i > 0; i--) {
-    var j = Math.floor(Math.random() * (i+1));
-    var tmp = allPoints[i]; allPoints[i] = allPoints[j]; allPoints[j] = tmp;
-  }
-  stonePositions = allPoints.slice(0, Math.min(count, allPoints.length));
+    var src = audioCtx.createBufferSource();
+    src.buffer = buf;
+    // 흑돌은 조금 더 낮고 묵직하게, 백돌은 약간 밝게
+    var filter = audioCtx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = isWhite ? 2800 : 1800;
+    filter.Q.value = 0.8;
+    var gain = audioCtx.createGain();
+    gain.gain.value = 0.55;
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(audioCtx.destination);
+    src.start();
+  } catch(e) {}
 }
 
-function updateStones(memoCount) {
-  // 메모 수 × 3개 돌 (최소 0, 최대 200)
-  var target = Math.min(memoCount * 3, 200);
-  generateStonePositions(target);
+// 전체 돌 재생성 (리사이즈 등)
+function rebuildStones(targetCount) {
+  var pts = shuffle(getGridPoints());
+  usedPoints = {};
+  stonePositions = [];
+  // 자연스러운 대국 배치: 흑백 교차, 가끔 연속도 허용
+  var blackCount = 0, whiteCount = 0;
+  for (var i = 0; i < pts.length && stonePositions.length < targetCount; i++) {
+    var k = ptKey(pts[i]);
+    if (usedPoints[k]) continue;
+    usedPoints[k] = true;
+    // 흑백 교차: 차이가 1 이하면 교대, 아니면 균형 맞추기
+    var isWhite;
+    if (blackCount === whiteCount) {
+      isWhite = (Math.random() < 0.5);
+    } else if (blackCount > whiteCount) {
+      isWhite = (Math.random() < 0.65); // 백돌 확률 높임
+    } else {
+      isWhite = (Math.random() < 0.35); // 흑돌 확률 높임
+    }
+    if (isWhite) whiteCount++; else blackCount++;
+    stonePositions.push({ x: pts[i].x, y: pts[i].y, white: isWhite });
+  }
+}
+
+// 메모 수 변화 시 호출 — 새 돌만 추가 (기존 위치 유지)
+var lastStoneCount = 0;
+function updateStones(memoCount, playSound) {
+  var target = fibStoneCount(memoCount);
+  if (target === lastStoneCount) { drawStones(); return; }
+
+  if (target < lastStoneCount) {
+    // 메모 삭제 시: 전체 재생성
+    rebuildStones(target);
+    lastStoneCount = target;
+    drawStones();
+    return;
+  }
+
+  // 새 돌 추가
+  var pts = getGridPoints();
+  var newPts = shuffle(pts.filter(function(p){ return !usedPoints[ptKey(p)]; }));
+  var blackCount = stonePositions.filter(function(p){ return !p.white; }).length;
+  var whiteCount = stonePositions.filter(function(p){ return p.white; }).length;
+
+  for (var i = 0; i < newPts.length && stonePositions.length < target; i++) {
+    var k = ptKey(newPts[i]);
+    if (usedPoints[k]) continue;
+    usedPoints[k] = true;
+    var isWhite = blackCount <= whiteCount
+      ? (Math.random() < 0.35)
+      : (Math.random() < 0.65);
+    if (isWhite) whiteCount++; else blackCount++;
+    stonePositions.push({ x: newPts[i].x, y: newPts[i].y, white: isWhite });
+  }
+
+  lastStoneCount = target;
   drawStones();
+  if (playSound && target > 0) {
+    var newest = stonePositions[stonePositions.length - 1];
+    if (newest) playStoneSound(newest.white);
+  }
 }
 
-window.addEventListener('resize', resizeCanvas);
+window.addEventListener('resize', function() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  rebuildStones(lastStoneCount);
+  drawStones();
+});
 resizeCanvas();
 
 // ── 공통 ──────────────────────────────────
@@ -633,13 +739,16 @@ function selectDay(k,d) {
 }
 
 // ── Firestore 구독 ────────────────────────
+var justSaved = false; // 저장 직후 onSnapshot 재실행 방지 플래그
+
 function subscribeToMemos(uid) {
   if (unsubscribe) unsubscribe();
   var q = query(collection(db,'memos'), where('uid','==',uid));
   unsubscribe = onSnapshot(q, function(snapshot){
     allMemos = snapshot.docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
-    updateStones(allMemos.length);  // 메모 수 → 바둑알 수 갱신
+    updateStones(allMemos.length, false);
     renderCal();
+    if (justSaved) { justSaved = false; return; } // 저장 직후엔 selectDay 재호출 생략
     if (selectedKey){
       var still=allMemos.some(function(m){ return dateKey(new Date(m.ts))===selectedKey; });
       if (still) selectDay(selectedKey,parseInt(selectedKey.split('-')[2]));
@@ -654,6 +763,7 @@ function addMemo() {
   var text=input.value.trim();
   if (!text||!currentUser) return;
   var memosBefore=allMemos.slice();
+  justSaved = true; // onSnapshot 재실행 시 selectDay 생략
   addDoc(collection(db,'memos'),{uid:currentUser.uid,text:text,ts:Date.now()})
     .then(function(){
       var similar=findSimilar(text,memosBefore);
@@ -664,9 +774,10 @@ function addMemo() {
       sb.disabled=true; sb.style.opacity='';
       viewYear=todayObj.getFullYear(); viewMonth=todayObj.getMonth();
       renderCal(); selectDay(todayKey,todayObj.getDate());
+      updateStones(allMemos.length, true); // 저장 시 소리 포함
       showRelatedPanel(similar);
     })
-    .catch(function(err){ console.error('저장 오류:',err); });
+    .catch(function(err){ console.error('저장 오류:',err); justSaved=false; });
 }
 
 // ── 인증 ──────────────────────────────────
@@ -682,7 +793,7 @@ onAuthStateChanged(auth, function(user){
   } else {
     currentUser=null;
     if(unsubscribe){unsubscribe();unsubscribe=null;}
-    allMemos=[]; updateStones(0);
+    allMemos=[]; lastStoneCount=0; stonePositions=[]; usedPoints={}; drawStones();
     showView('login');
   }
 });
