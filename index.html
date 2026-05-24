@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>메모 앱</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#0f0f0f;color:#e8e6e0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:2rem 1.5rem;min-height:100vh}
+.app{max-width:680px;margin:0 auto}
+
+/* 로그인 화면 */
+.login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;gap:1.5rem}
+.login-title{font-size:24px;font-weight:500;color:#e8e6e0}
+.login-sub{font-size:14px;color:#555;text-align:center;line-height:1.6}
+.google-btn{display:flex;align-items:center;gap:.75rem;background:#e8e6e0;color:#0f0f0f;border:none;border-radius:50px;padding:.75rem 1.5rem;font-size:15px;font-weight:500;cursor:pointer;transition:background .15s,transform .1s;font-family:inherit}
+.google-btn:hover{background:#fff;transform:scale(1.03)}
+.google-btn:active{transform:scale(.97)}
+.google-btn img{width:20px;height:20px}
+.login-err{font-size:13px;color:#e24b4a;display:none}
+
+/* 앱 헤더 */
+.app-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem}
+.header-left{}
+.date-label{font-size:11px;color:#555;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.2rem}
+.date-text{font-size:22px;font-weight:500;color:#e8e6e0}
+.user-area{display:flex;align-items:center;gap:.75rem}
+.user-avatar{width:32px;height:32px;border-radius:50%;border:0.5px solid #333;object-fit:cover}
+.user-name{font-size:13px;color:#888;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.logout-btn{background:none;border:0.5px solid #2a2a2a;border-radius:6px;color:#555;padding:4px 10px;font-size:12px;cursor:pointer;transition:color .12s,border-color .12s;font-family:inherit}
+.logout-btn:hover{color:#e8e6e0;border-color:#444}
+
+/* 입력 + 달력 */
+.main-row{display:flex;gap:1rem;align-items:flex-start;margin-bottom:1.75rem}
+.compose{background:#1a1a1a;border:0.5px solid #2a2a2a;border-radius:12px;padding:1rem 1.25rem;flex:1;min-width:0}
+.compose-top{display:flex;gap:.875rem;align-items:flex-start}
+textarea{flex:1;background:transparent;border:none;outline:none;resize:none;font-size:15px;color:#e8e6e0;font-family:inherit;line-height:1.7;min-height:72px}
+textarea::placeholder{color:#3a3a3a}
+.save-stone{width:40px;height:40px;border-radius:50%;background:#e8e6e0;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .12s,background .12s;margin-top:2px;padding:0}
+.save-stone:hover{background:#fff;transform:scale(1.07)}
+.save-stone:active{transform:scale(.93)}
+.save-stone:disabled{background:#2a2a2a;cursor:not-allowed}
+.save-stone:disabled i{color:#484848}
+.save-stone i{font-size:17px;color:#0f0f0f;line-height:1}
+.compose-footer{display:flex;justify-content:flex-end;margin-top:.5rem;padding-top:.5rem;border-top:0.5px solid #222}
+.char-count{font-size:11px;color:#444}
+
+/* 미니 달력 */
+.mini-cal{background:#1a1a1a;border:0.5px solid #2a2a2a;border-radius:10px;padding:.5rem .6rem;width:148px;flex-shrink:0}
+.mcal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem}
+.mcal-title{font-size:10px;font-weight:500;color:#aaa}
+.mcal-nav{background:none;border:none;cursor:pointer;color:#555;padding:1px 3px;border-radius:4px;transition:color .12s;font-size:12px;line-height:1}
+.mcal-nav:hover{color:#e8e6e0}
+.mcal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}
+.mcal-dow{font-size:8px;color:#3a3a3a;text-align:center;padding:2px 0;font-weight:500}
+.mcal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:9px;color:#404040;cursor:default;transition:background .1s}
+.mcal-day.active{background:#e8e6e0;color:#0f0f0f;cursor:pointer;font-weight:500}
+.mcal-day.active:hover{background:#fff}
+.mcal-day.today{color:#888;border:0.5px solid #333}
+.mcal-day.today.active{border-color:#e8e6e0}
+.mcal-day.selected{background:#534AB7;color:#CECBF6}
+.mcal-day.empty{pointer-events:none}
+
+/* 메모 패널 */
+.memo-panel-title{font-size:12px;color:#666;margin-bottom:.625rem}
+.memo-list{display:flex;flex-direction:column;gap:.5rem}
+.memo-card{background:#1a1a1a;border:0.5px solid #2a2a2a;border-radius:10px;padding:.75rem 1rem;display:flex;align-items:flex-start;gap:.75rem;animation:fadeIn .18s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+.memo-card:hover{border-color:#333}
+.memo-content{flex:1;min-width:0}
+.memo-text{font-size:13px;color:#b0aea8;line-height:1.65;word-break:break-word;white-space:pre-wrap}
+.memo-time{font-size:11px;color:#3a3a3a;margin-top:.3rem}
+.del-btn{background:none;border:none;cursor:pointer;color:#2e2e2e;padding:2px 4px;border-radius:4px;transition:color .12s,background .12s;flex-shrink:0;font-size:15px}
+.del-btn:hover{color:#e24b4a;background:#1f1414}
+.empty-day{font-size:13px;color:#333;padding:.75rem 0;text-align:center}
+
+/* 로딩 */
+.loading{display:flex;align-items:center;justify-content:center;min-height:80vh;font-size:14px;color:#444}
+</style>
+</head>
+<body>
+
+<!-- 로딩 -->
+<div class="app" id="loading-view">
+  <div class="loading">불러오는 중...</div>
+</div>
+
+<!-- 로그인 화면 -->
+<div class="app" id="login-view" style="display:none">
+  <div class="login-screen">
+    <div class="login-title">메모 앱</div>
+    <div class="login-sub">Google 계정으로 로그인하면<br>어디서든 내 메모를 볼 수 있어요</div>
+    <button class="google-btn" id="google-login-btn">
+      <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" alt="Google">
+      Google로 로그인
+    </button>
+    <div class="login-err" id="login-err">로그인에 실패했어요. 다시 시도해 주세요.</div>
+  </div>
+</div>
+
+<!-- 메인 앱 -->
+<div class="app" id="app-view" style="display:none">
+  <div class="app-header">
+    <div class="header-left">
+      <div class="date-label">오늘</div>
+      <div class="date-text" id="today-display"></div>
+    </div>
+    <div class="user-area">
+      <img class="user-avatar" id="user-avatar" src="" alt="">
+      <span class="user-name" id="user-name"></span>
+      <button class="logout-btn" id="logout-btn">로그아웃</button>
+    </div>
+  </div>
+
+  <div class="main-row">
+    <div class="compose">
+      <div class="compose-top">
+        <textarea id="memo-input" placeholder="지금 무슨 생각을 하고 있나요?" maxlength="10000"></textarea>
+        <button class="save-stone" id="save-btn" disabled aria-label="저장">
+          <i class="ti ti-check" aria-hidden="true"></i>
+        </button>
+      </div>
+      <div class="compose-footer">
+        <span class="char-count" id="char-count">0 / 10,000</span>
+      </div>
+    </div>
+    <div class="mini-cal">
+      <div class="mcal-header">
+        <button class="mcal-nav" id="prev-btn"><i class="ti ti-chevron-left"></i></button>
+        <span class="mcal-title" id="cal-title"></span>
+        <button class="mcal-nav" id="next-btn"><i class="ti ti-chevron-right"></i></button>
+      </div>
+      <div class="mcal-grid" id="cal-grid"></div>
+    </div>
+  </div>
+
+  <div id="memo-panel" style="display:none">
+    <div class="memo-panel-title" id="panel-title"></div>
+    <div class="memo-list" id="memo-list"></div>
+  </div>
+</div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
+import { getFirestore, collection, addDoc, deleteDoc, doc, query, where, onSnapshot, orderBy }
+  from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBMf9PtX_rKeNc4HDougCMFZGigrK8TXAQ",
+  authDomain: "write-64d2a.firebaseapp.com",
+  projectId: "write-64d2a",
+  storageBucket: "write-64d2a.firebasestorage.app",
+  messagingSenderId: "712510667055",
+  appId: "1:712510667055:web:d626028dc781e4811a49da",
+  measurementId: "G-YLG63WD348"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const auth = getAuth(firebaseApp);
+const db = getFirestore(firebaseApp);
+const provider = new GoogleAuthProvider();
+
+const DOW = ['일','월','화','수','목','금','토'];
+const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
+const todayObj = new Date();
+const todayKey = dateKey(todayObj);
+let viewYear = todayObj.getFullYear();
+let viewMonth = todayObj.getMonth();
+let selectedKey = null;
+let currentUser = null;
+let allMemos = [];
+let unsubscribe = null;
+
+// 뷰 전환
+function showView(name) {
+  ['loading-view','login-view','app-view'].forEach(id => {
+    document.getElementById(id).style.display = id === name+'-view' ? 'block' : 'none';
+  });
+}
+
+// 날짜 키
+function dateKey(d) {
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+
+// 달력 렌더
+function activeDates() {
+  const s = new Set();
+  allMemos.forEach(m => s.add(dateKey(new Date(m.ts))));
+  return s;
+}
+
+function renderCal() {
+  const calTitle = document.getElementById('cal-title');
+  const calGrid = document.getElementById('cal-grid');
+  calTitle.textContent = viewYear+'년 '+MONTHS[viewMonth];
+  calGrid.innerHTML = '';
+  DOW.forEach(d => {
+    const el = document.createElement('div');
+    el.className = 'mcal-dow'; el.textContent = d; calGrid.appendChild(el);
+  });
+  const active = activeDates();
+  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
+  const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
+  for (let i = 0; i < firstDay; i++) {
+    const el = document.createElement('div'); el.className = 'mcal-day empty'; calGrid.appendChild(el);
+  }
+  for (let d = 1; d <= daysInMonth; d++) {
+    const el = document.createElement('div');
+    const k = viewYear+'-'+String(viewMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    el.className = 'mcal-day'; el.textContent = d;
+    if (k === todayKey) el.classList.add('today');
+    if (active.has(k)) el.classList.add('active');
+    if (k === selectedKey) el.classList.add('selected');
+    if (active.has(k)) el.addEventListener('click', () => selectDay(k, d));
+    calGrid.appendChild(el);
+  }
+}
+
+function selectDay(k, d) {
+  selectedKey = k;
+  renderCal();
+  const memos = allMemos.filter(m => dateKey(new Date(m.ts)) === k);
+  const parts = k.split('-');
+  const memoPanel = document.getElementById('memo-panel');
+  const panelTitle = document.getElementById('panel-title');
+  const memoList = document.getElementById('memo-list');
+  panelTitle.textContent = parts[0]+'년 '+MONTHS[parseInt(parts[1])-1]+' '+parseInt(parts[2])+'일 — 메모 '+memos.length+'개';
+  memoList.innerHTML = '';
+  if (memos.length === 0) {
+    const e = document.createElement('div'); e.className = 'empty-day';
+    e.textContent = '이 날엔 메모가 없어요'; memoList.appendChild(e);
+  } else {
+    memos.slice().reverse().forEach(memo => {
+      const card = document.createElement('div'); card.className = 'memo-card';
+      const dt = new Date(memo.ts);
+      const hh = String(dt.getHours()).padStart(2,'0');
+      const mm = String(dt.getMinutes()).padStart(2,'0');
+      card.innerHTML = '<div class="memo-content"><div class="memo-text"></div><div class="memo-time">'+hh+':'+mm+'</div></div><button class="del-btn" aria-label="삭제"><i class="ti ti-x"></i></button>';
+      card.querySelector('.memo-text').textContent = memo.text;
+      card.querySelector('.del-btn').addEventListener('click', async () => {
+        await deleteDoc(doc(db, 'memos', memo.id));
+      });
+      memoList.appendChild(card);
+    });
+  }
+  memoPanel.style.display = 'block';
+}
+
+// Firestore 실시간 구독
+function subscribeToMemos(uid) {
+  if (unsubscribe) unsubscribe();
+  const q = query(collection(db, 'memos'), where('uid','==',uid), orderBy('ts','asc'));
+  unsubscribe = onSnapshot(q, snapshot => {
+    allMemos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+    renderCal();
+    if (selectedKey) {
+      const still = allMemos.some(m => dateKey(new Date(m.ts)) === selectedKey);
+      if (still) selectDay(selectedKey, parseInt(selectedKey.split('-')[2]));
+      else { document.getElementById('memo-panel').style.display='none'; selectedKey=null; }
+    }
+  });
+}
+
+// 메모 저장
+async function addMemo() {
+  const input = document.getElementById('memo-input');
+  const text = input.value.trim();
+  if (!text || !currentUser) return;
+  await addDoc(collection(db, 'memos'), { uid: currentUser.uid, text, ts: Date.now() });
+  input.value = '';
+  document.getElementById('char-count').textContent = '0 / 10,000';
+  document.getElementById('char-count').style.color = '#444';
+  document.getElementById('save-btn').disabled = true;
+  viewYear = todayObj.getFullYear(); viewMonth = todayObj.getMonth();
+  renderCal();
+  selectDay(todayKey, todayObj.getDate());
+}
+
+// 인증 상태 감지
+onAuthStateChanged(auth, user => {
+  if (user) {
+    currentUser = user;
+    document.getElementById('user-avatar').src = user.photoURL || '';
+    document.getElementById('user-name').textContent = user.displayName || user.email;
+    document.getElementById('today-display').textContent =
+      todayObj.getFullYear()+'년 '+MONTHS[todayObj.getMonth()]+' '+todayObj.getDate()+'일 '+DOW[todayObj.getDay()]+'요일';
+    subscribeToMemos(user.uid);
+    showView('app');
+  } else {
+    currentUser = null;
+    if (unsubscribe) { unsubscribe(); unsubscribe = null; }
+    allMemos = [];
+    showView('login');
+  }
+});
+
+// 로그인
+document.getElementById('google-login-btn').addEventListener('click', async () => {
+  const err = document.getElementById('login-err');
+  err.style.display = 'none';
+  try { await signInWithPopup(auth, provider); }
+  catch(e) { err.style.display = 'block'; }
+});
+
+// 로그아웃
+document.getElementById('logout-btn').addEventListener('click', async () => {
+  await signOut(auth);
+});
+
+// 텍스트 입력
+document.getElementById('memo-input').addEventListener('input', () => {
+  const input = document.getElementById('memo-input');
+  const len = input.value.length;
+  const cc = document.getElementById('char-count');
+  const sb = document.getElementById('save-btn');
+  cc.textContent = len.toLocaleString()+' / 10,000';
+  cc.style.color = len > 9000 ? '#e24b4a' : '#444';
+  sb.disabled = len === 0;
+  sb.style.background = len === 0 ? '#2a2a2a' : '#e8e6e0';
+  sb.querySelector('i').style.color = len === 0 ? '#484848' : '#0f0f0f';
+});
+document.getElementById('memo-input').addEventListener('keydown', e => {
+  if ((e.ctrlKey||e.metaKey) && e.key==='Enter') { e.preventDefault(); addMemo(); }
+});
+document.getElementById('save-btn').addEventListener('click', addMemo);
+document.getElementById('prev-btn').addEventListener('click', () => {
+  viewMonth--; if(viewMonth<0){viewMonth=11;viewYear--;} renderCal();
+});
+document.getElementById('next-btn').addEventListener('click', () => {
+  viewMonth++; if(viewMonth>11){viewMonth=0;viewYear++;} renderCal();
+});
+</script>
+</body>
+</html>
