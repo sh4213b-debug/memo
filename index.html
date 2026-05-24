@@ -1,102 +1,278 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ko" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>메모 앱</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css">
 <style>
+/* ── 테마 변수 ────────────────────────────── */
+:root {
+  --lines: 18px;             /* 바둑판 칸 크기 */
+}
+[data-theme="dark"] {
+  --bg:        #1a1108;      /* 어두운 나무 */
+  --line:      rgba(255,255,255,0.18);
+  --stone:     #f0ede8;      /* 흰 돌 */
+  --stone-sh:  rgba(0,0,0,.55);
+  --stone-hl:  rgba(255,255,255,.7);
+  --ui-bg:     rgba(15,12,6,.78);
+  --ui-border: rgba(255,255,255,.12);
+  --ui-text:   #e8e4dc;
+  --ui-sub:    rgba(232,228,220,.45);
+  --ui-muted:  rgba(232,228,220,.2);
+  --compose-bg:rgba(10,8,4,.6);
+  --btn-bg:    #f0ede8;
+  --btn-icon:  #1a1108;
+  --btn-dis:   rgba(255,255,255,.12);
+  --del-hover: rgba(226,75,74,.18);
+  --card-bg:   rgba(10,8,4,.55);
+  --card-border:rgba(255,255,255,.1);
+  --related-bg: rgba(10,8,4,.7);
+  --related-border: rgba(255,255,255,.15);
+  --related-txt: rgba(232,228,220,.7);
+  --related-kw:  #c8b97a;
+  --dialog-bg:  #f5f2ec;
+  --dialog-text:#1a1108;
+  --dialog-sub: #5a5040;
+  --dialog-cancel-bg: #e0dbd0;
+  --dialog-cancel-c:  #3a3020;
+  --toggle-icon: ☀️;
+}
+[data-theme="light"] {
+  --bg:        #f5f0e8;
+  --line:      rgba(30,20,5,.25);
+  --stone:     #1a1208;      /* 검은 돌 */
+  --stone-sh:  rgba(0,0,0,.35);
+  --stone-hl:  rgba(255,255,255,.25);
+  --ui-bg:     rgba(245,240,232,.85);
+  --ui-border: rgba(30,20,5,.15);
+  --ui-text:   #1a1208;
+  --ui-sub:    rgba(30,20,5,.5);
+  --ui-muted:  rgba(30,20,5,.2);
+  --compose-bg:rgba(255,252,245,.75);
+  --btn-bg:    #1a1208;
+  --btn-icon:  #f5f0e8;
+  --btn-dis:   rgba(30,20,5,.15);
+  --del-hover: rgba(226,75,74,.12);
+  --card-bg:   rgba(255,252,245,.6);
+  --card-border:rgba(30,20,5,.12);
+  --related-bg: rgba(255,252,245,.75);
+  --related-border: rgba(30,20,5,.15);
+  --related-txt: rgba(30,20,5,.65);
+  --related-kw:  #7a6020;
+  --dialog-bg:  #1a1208;
+  --dialog-text:#f5f0e8;
+  --dialog-sub: #c8b87a;
+  --dialog-cancel-bg: #2e2010;
+  --dialog-cancel-c:  #e8e0c8;
+  --toggle-icon: 🌙;
+}
+
+/* ── 바둑판 배경 ──────────────────────────── */
 *{box-sizing:border-box;margin:0;padding:0}
-body{background:#0f0f0f;color:#e8e6e0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;padding:2rem 1.5rem;min-height:100vh}
-.app{max-width:680px;margin:0 auto}
+html,body{min-height:100vh}
+body {
+  font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  color: var(--ui-text);
+  transition: background .4s, color .3s;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* 바둑판 선 배경 */
+body::before {
+  content:'';
+  position:fixed;
+  inset:0;
+  background-color: var(--bg);
+  background-image:
+    linear-gradient(var(--line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: var(--lines) var(--lines);
+  background-position: 9px 9px;
+  z-index:0;
+  transition: background .4s;
+}
+
+/* 바둑알 캔버스 (배경에 떠있는 돌들) */
+#stone-canvas {
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:1;
+}
+
+/* 콘텐츠는 z-index:2 위에 */
+.app { position:relative; z-index:2; max-width:700px; margin:0 auto; padding:2rem 1.5rem; }
+
+/* ── 로딩 / 로그인 ────────────────────────── */
+.loading{display:flex;align-items:center;justify-content:center;min-height:80vh;font-size:14px;color:var(--ui-sub)}
 .login-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:80vh;gap:1.5rem}
-.login-title{font-size:24px;font-weight:500;color:#e8e6e0}
-.login-sub{font-size:14px;color:#555;text-align:center;line-height:1.6}
-.google-btn{display:flex;align-items:center;gap:.75rem;background:#e8e6e0;color:#0f0f0f;border:none;border-radius:50px;padding:.75rem 1.5rem;font-size:15px;font-weight:500;cursor:pointer;transition:background .15s,transform .1s;font-family:inherit}
-.google-btn:hover{background:#fff;transform:scale(1.03)}
-.google-btn:active{transform:scale(.97)}
+.login-logo{font-size:48px;margin-bottom:.25rem;filter:drop-shadow(0 4px 12px rgba(0,0,0,.4))}
+.login-title{font-size:22px;font-weight:600;color:var(--ui-text);letter-spacing:.02em}
+.login-sub{font-size:13px;color:var(--ui-sub);text-align:center;line-height:1.7}
+.google-btn{display:flex;align-items:center;gap:.75rem;background:var(--btn-bg);color:var(--btn-icon);border:none;border-radius:50px;padding:.75rem 1.75rem;font-size:15px;font-weight:500;cursor:pointer;transition:opacity .15s,transform .1s;font-family:inherit;box-shadow:0 4px 20px var(--stone-sh)}
+.google-btn:hover{opacity:.88;transform:scale(1.03)}
 .google-btn img{width:20px;height:20px}
 .login-err{font-size:13px;color:#e24b4a;display:none}
-.app-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem}
-.date-label{font-size:11px;color:#555;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.2rem}
-.date-text{font-size:22px;font-weight:500;color:#e8e6e0}
-.user-area{display:flex;align-items:center;gap:.75rem}
-.user-avatar{width:32px;height:32px;border-radius:50%;border:0.5px solid #333;object-fit:cover}
-.user-name{font-size:13px;color:#888;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.logout-btn{background:none;border:0.5px solid #2a2a2a;border-radius:6px;color:#555;padding:4px 10px;font-size:12px;cursor:pointer;transition:color .12s,border-color .12s;font-family:inherit}
-.logout-btn:hover{color:#e8e6e0;border-color:#444}
-.main-row{display:flex;gap:1rem;align-items:flex-start;margin-bottom:1.75rem}
-.compose{background:#1a1a1a;border:0.5px solid #2a2a2a;border-radius:12px;padding:1rem 1.25rem;flex:1;min-width:0}
-.compose-top{display:flex;gap:.875rem;align-items:flex-start}
-textarea{flex:1;background:transparent;border:none;outline:none;resize:none;font-size:15px;color:#e8e6e0;font-family:inherit;line-height:1.7;min-height:72px}
-textarea::placeholder{color:#3a3a3a}
-.save-stone{width:40px;height:40px;border-radius:50%;background:#e8e6e0;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:transform .12s,background .12s;margin-top:2px;padding:0}
-.save-stone:hover{background:#fff;transform:scale(1.07)}
-.save-stone:active{transform:scale(.93)}
-.save-stone:disabled{background:#2a2a2a;cursor:not-allowed}
-.save-stone:disabled i{color:#484848}
-.save-stone i{font-size:17px;color:#0f0f0f;line-height:1}
-.compose-footer{display:flex;justify-content:space-between;align-items:center;margin-top:.5rem;padding-top:.5rem;border-top:0.5px solid #222}
-.mic-btn{background:none;border:none;cursor:pointer;color:#555;padding:2px 4px;border-radius:6px;font-size:16px;line-height:1;transition:color .12s,background .12s;display:flex;align-items:center}
-.mic-btn:hover{color:#e8e6e0;background:#222}
-.mic-btn.recording{color:#e24b4a;animation:pulse 1s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.char-count{font-size:11px;color:#444}
-.mini-cal{background:#1a1a1a;border:0.5px solid #2a2a2a;border-radius:10px;padding:.5rem .6rem;width:148px;flex-shrink:0}
-.side-col{display:flex;flex-direction:column;gap:.625rem;width:148px;flex-shrink:0}
-.mcal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem}
-.mcal-title{font-size:10px;font-weight:500;color:#aaa}
-.mcal-nav{background:none;border:none;cursor:pointer;color:#555;padding:1px 3px;border-radius:4px;transition:color .12s;font-size:12px;line-height:1}
-.mcal-nav:hover{color:#e8e6e0}
-.mcal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}
-.mcal-dow{font-size:8px;color:#3a3a3a;text-align:center;padding:2px 0;font-weight:500}
-.mcal-day{aspect-ratio:1;display:flex;align-items:center;justify-content:center;border-radius:50%;font-size:9px;color:#404040;cursor:default;transition:background .1s}
-.mcal-day.active{background:#e8e6e0;color:#0f0f0f;cursor:pointer;font-weight:500}
-.mcal-day.active:hover{background:#fff}
-.mcal-day.today{color:#888;border:0.5px solid #333}
-.mcal-day.today.active{border-color:#e8e6e0}
-.mcal-day.selected{background:#534AB7;color:#CECBF6}
-.mcal-day.empty{pointer-events:none}
-.memo-panel-title{font-size:12px;color:#666;margin-bottom:.625rem}
-.memo-list{display:flex;flex-direction:column;gap:.5rem}
-.memo-card{background:#1a1a1a;border:0.5px solid #2a2a2a;border-radius:10px;padding:.75rem 1rem;display:flex;align-items:flex-start;gap:.75rem;animation:fadeIn .18s ease}
-@keyframes fadeIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
-.memo-card:hover{border-color:#333}
-.memo-content{flex:1;min-width:0}
-.memo-text{font-size:13px;color:#b0aea8;line-height:1.65;word-break:break-word;white-space:pre-wrap}
-.memo-time{font-size:11px;color:#3a3a3a;margin-top:.3rem}
-.del-btn{background:none;border:none;cursor:pointer;color:#2e2e2e;padding:2px 4px;border-radius:4px;transition:color .12s,background .12s;flex-shrink:0;font-size:15px}
-.del-btn:hover{color:#e24b4a;background:#1f1414}
-.empty-day{font-size:13px;color:#333;padding:.75rem 0;text-align:center}
-.loading{display:flex;align-items:center;justify-content:center;min-height:80vh;font-size:14px;color:#444}
 
-/* 커스텀 확인 다이얼로그 */
-.dialog-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:1000;animation:fadeIn .15s ease}
-.dialog-box{background:#0f0f0f;border:0.5px solid #2a2a2a;border-radius:14px;padding:1.5rem 1.75rem;max-width:320px;width:90%;text-align:center}
-.dialog-msg{font-size:15px;color:#e8e6e0;margin-bottom:1.25rem;line-height:1.6}
+/* ── 앱 헤더 ──────────────────────────────── */
+.app-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;gap:.75rem}
+.header-left{}
+.date-label{font-size:10px;color:var(--ui-muted);letter-spacing:.12em;text-transform:uppercase;margin-bottom:.15rem}
+.date-text{font-size:20px;font-weight:600;color:var(--ui-text);letter-spacing:.01em}
+.header-right{display:flex;align-items:center;gap:.625rem}
+.user-avatar{width:30px;height:30px;border-radius:50%;border:1.5px solid var(--ui-border);object-fit:cover;box-shadow:0 2px 8px var(--stone-sh)}
+.user-name{font-size:12px;color:var(--ui-sub);max-width:100px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.theme-btn{background:none;border:0.5px solid var(--ui-border);border-radius:8px;padding:4px 8px;font-size:14px;cursor:pointer;line-height:1;transition:border-color .15s,transform .1s;color:var(--ui-text)}
+.theme-btn:hover{transform:scale(1.1)}
+.logout-btn{background:none;border:0.5px solid var(--ui-border);border-radius:6px;color:var(--ui-sub);padding:4px 10px;font-size:11px;cursor:pointer;transition:color .12s,border-color .12s;font-family:inherit}
+.logout-btn:hover{color:var(--ui-text);border-color:var(--ui-sub)}
+
+/* ── 메인 레이아웃 ────────────────────────── */
+.main-row{display:flex;gap:1rem;align-items:flex-start;margin-bottom:1.5rem}
+.side-col{display:flex;flex-direction:column;gap:.625rem;width:148px;flex-shrink:0}
+
+/* ── 입력창 ───────────────────────────────── */
+.compose{
+  background:var(--compose-bg);
+  border:0.5px solid var(--ui-border);
+  border-radius:14px;
+  padding:1rem 1.25rem;
+  flex:1;min-width:0;
+  backdrop-filter:blur(12px);
+  box-shadow:0 4px 24px rgba(0,0,0,.18);
+}
+.compose-top{display:flex;gap:.875rem;align-items:flex-start}
+textarea{
+  flex:1;background:transparent;border:none;outline:none;resize:none;
+  font-size:15px;color:var(--ui-text);font-family:inherit;line-height:1.75;min-height:80px;
+}
+textarea::placeholder{color:var(--ui-muted)}
+
+/* 저장 버튼 — 바둑알 */
+.save-stone{
+  width:42px;height:42px;
+  border-radius:50%;
+  background: radial-gradient(circle at 35% 35%, var(--stone-hl), var(--btn-bg) 60%, color-mix(in srgb, var(--btn-bg) 70%, black));
+  border:none;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;
+  transition:transform .12s,opacity .12s;
+  margin-top:2px;padding:0;
+  box-shadow: 2px 4px 10px var(--stone-sh), inset 0 -2px 4px rgba(0,0,0,.2);
+}
+.save-stone:hover{transform:scale(1.08)}
+.save-stone:active{transform:scale(.93)}
+.save-stone:disabled{
+  background: var(--btn-dis);
+  box-shadow:none;cursor:not-allowed;
+}
+.save-stone:disabled i{color:var(--ui-muted)!important}
+.save-stone i{font-size:17px;color:var(--btn-icon);line-height:1}
+
+.compose-footer{display:flex;justify-content:space-between;align-items:center;margin-top:.625rem;padding-top:.625rem;border-top:0.5px solid var(--ui-border)}
+.mic-btn{background:none;border:none;cursor:pointer;color:var(--ui-sub);padding:2px 5px;border-radius:6px;font-size:16px;line-height:1;transition:color .12s,background .12s;display:flex;align-items:center}
+.mic-btn:hover{color:var(--ui-text);background:var(--ui-muted)}
+.mic-btn.recording{color:#e24b4a;animation:pulse 1s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.char-count{font-size:10px;color:var(--ui-muted)}
+
+/* ── 미니 달력 ────────────────────────────── */
+.mini-cal{
+  background:var(--compose-bg);
+  border:0.5px solid var(--ui-border);
+  border-radius:10px;
+  padding:.5rem .6rem;
+  backdrop-filter:blur(10px);
+  box-shadow:0 2px 12px rgba(0,0,0,.15);
+}
+.mcal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem}
+.mcal-title{font-size:10px;font-weight:600;color:var(--ui-text)}
+.mcal-nav{background:none;border:none;cursor:pointer;color:var(--ui-muted);padding:1px 3px;border-radius:4px;transition:color .12s;font-size:12px;line-height:1}
+.mcal-nav:hover{color:var(--ui-text)}
+.mcal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px}
+.mcal-dow{font-size:8px;color:var(--ui-muted);text-align:center;padding:2px 0;font-weight:500}
+.mcal-day{
+  aspect-ratio:1;display:flex;align-items:center;justify-content:center;
+  border-radius:50%;font-size:9px;color:var(--ui-muted);cursor:default;transition:all .1s;
+}
+/* 메모 있는 날 = 바둑알 */
+.mcal-day.active{
+  background: radial-gradient(circle at 35% 30%, var(--stone-hl), var(--btn-bg) 60%, color-mix(in srgb,var(--btn-bg) 65%,black));
+  color:var(--btn-icon);cursor:pointer;font-weight:600;font-size:8px;
+  box-shadow:1px 2px 5px var(--stone-sh);
+}
+.mcal-day.active:hover{transform:scale(1.15)}
+.mcal-day.today{color:var(--ui-sub);outline:1px solid var(--ui-muted);outline-offset:-1px}
+.mcal-day.today.active{outline-color:transparent}
+.mcal-day.selected{
+  background: radial-gradient(circle at 35% 30%, rgba(255,255,255,.3), #c8a84b 55%, #8a6820);
+  color:#fff;box-shadow:1px 2px 6px rgba(0,0,0,.4);
+}
+.mcal-day.empty{pointer-events:none}
+
+/* ── 연관 기록 패널 ───────────────────────── */
+.related-panel{
+  background:var(--related-bg);
+  border:0.5px solid var(--related-border);
+  border-radius:10px;padding:.5rem .6rem;
+  backdrop-filter:blur(10px);
+  animation:fadeIn .2s ease;
+}
+.related-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem}
+.related-title{font-size:9px;color:var(--related-kw);font-weight:600;display:flex;align-items:center;gap:.3rem;letter-spacing:.03em}
+.related-title i{font-size:11px}
+.related-close{background:none;border:none;cursor:pointer;color:var(--ui-muted);font-size:12px;padding:1px 3px;border-radius:3px;line-height:1;transition:color .12s}
+.related-close:hover{color:var(--ui-text)}
+.related-list{display:flex;flex-direction:column;gap:.35rem}
+.related-card{
+  background:var(--card-bg);border:0.5px solid var(--card-border);
+  border-radius:6px;padding:.4rem .5rem;cursor:pointer;transition:border-color .12s,transform .1s;
+}
+.related-card:hover{border-color:var(--related-kw);transform:scale(1.02)}
+.related-card-text{font-size:9px;color:var(--related-txt);line-height:1.5;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.related-card-meta{font-size:8px;color:var(--ui-muted);margin-top:.2rem}
+.related-card-keywords{font-size:8px;color:var(--related-kw);margin-top:.15rem}
+
+/* ── 메모 패널 (날짜별) ───────────────────── */
+.memo-panel-title{font-size:11px;color:var(--ui-sub);margin-bottom:.625rem;letter-spacing:.04em}
+.memo-list{display:flex;flex-direction:column;gap:.5rem}
+.memo-card{
+  background:var(--card-bg);
+  border:0.5px solid var(--card-border);
+  border-radius:12px;padding:.75rem 1rem;
+  display:flex;align-items:flex-start;gap:.75rem;
+  animation:fadeIn .18s ease;
+  backdrop-filter:blur(8px);
+}
+@keyframes fadeIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
+.memo-card:hover{border-color:var(--ui-sub)}
+.memo-content{flex:1;min-width:0}
+.memo-text{font-size:13px;color:var(--ui-text);line-height:1.65;word-break:break-word;white-space:pre-wrap}
+.memo-time{font-size:11px;color:var(--ui-muted);margin-top:.3rem}
+.del-btn{background:none;border:none;cursor:pointer;color:var(--ui-muted);padding:2px 4px;border-radius:4px;transition:color .12s,background .12s;flex-shrink:0;font-size:15px}
+.del-btn:hover{color:#e24b4a;background:var(--del-hover)}
+.empty-day{font-size:13px;color:var(--ui-muted);padding:.75rem 0;text-align:center}
+
+/* ── 삭제 다이얼로그 ──────────────────────── */
+.dialog-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:1000;animation:fadeIn .15s ease;backdrop-filter:blur(4px)}
+.dialog-box{background:var(--dialog-bg);border-radius:16px;padding:1.75rem 2rem;max-width:300px;width:90%;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+.dialog-msg{font-size:15px;color:var(--dialog-text);margin-bottom:1.25rem;line-height:1.6;font-weight:500}
 .dialog-btns{display:flex;gap:.75rem;justify-content:center}
-.dialog-btn{padding:8px 24px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;border:none;font-family:inherit;transition:opacity .12s}
-.dialog-btn.cancel{background:#1e1e1e;color:#888;border:0.5px solid #333}
+.dialog-btn{padding:9px 26px;border-radius:50px;font-size:14px;font-weight:500;cursor:pointer;border:none;font-family:inherit;transition:opacity .12s,transform .1s}
+.dialog-btn:active{transform:scale(.96)}
+.dialog-btn.cancel{background:var(--dialog-cancel-bg);color:var(--dialog-cancel-c)}
 .dialog-btn.cancel:hover{opacity:.8}
 .dialog-btn.confirm{background:#e24b4a;color:#fff}
 .dialog-btn.confirm:hover{opacity:.85}
-
-/* 연관 메모 패널 — 사이드바 컴팩트 */
-.related-panel{background:#16161e;border:0.5px solid #2e2a4a;border-radius:10px;padding:.5rem .6rem;width:148px;animation:fadeIn .2s ease}
-.related-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem}
-.related-title{font-size:9px;color:#8b87c4;font-weight:500;display:flex;align-items:center;gap:.3rem;letter-spacing:.02em}
-.related-title i{font-size:11px}
-.related-close{background:none;border:none;cursor:pointer;color:#444;font-size:12px;padding:1px 3px;border-radius:3px;line-height:1;transition:color .12s}
-.related-close:hover{color:#8b87c4}
-.related-list{display:flex;flex-direction:column;gap:.35rem}
-.related-card{background:#1a1828;border:0.5px solid #2e2a4a;border-radius:6px;padding:.4rem .5rem;cursor:pointer;transition:border-color .12s}
-.related-card:hover{border-color:#534AB7}
-.related-card-text{font-size:9px;color:#9896b8;line-height:1.5;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.related-card-meta{font-size:8px;color:#3a3860;margin-top:.2rem}
-.related-card-keywords{font-size:8px;color:#534AB7;margin-top:.15rem}
 </style>
 </head>
 <body>
+
+<!-- 바둑알 배경 캔버스 -->
+<canvas id="stone-canvas"></canvas>
 
 <div class="app" id="loading-view">
   <div class="loading">불러오는 중...</div>
@@ -104,6 +280,7 @@ textarea::placeholder{color:#3a3a3a}
 
 <div class="app" id="login-view" style="display:none">
   <div class="login-screen">
+    <div class="login-logo">⚫</div>
     <div class="login-title">메모 앱</div>
     <div class="login-sub">Google 계정으로 로그인하면<br>어디서든 내 메모를 볼 수 있어요</div>
     <button class="google-btn" id="google-login-btn">
@@ -120,7 +297,8 @@ textarea::placeholder{color:#3a3a3a}
       <div class="date-label">오늘</div>
       <div class="date-text" id="today-display"></div>
     </div>
-    <div class="user-area">
+    <div class="header-right">
+      <button class="theme-btn" id="theme-btn" title="테마 전환">☀️</button>
       <img class="user-avatar" id="user-avatar" src="" alt="">
       <span class="user-name" id="user-name"></span>
       <button class="logout-btn" id="logout-btn">로그아웃</button>
@@ -143,7 +321,6 @@ textarea::placeholder{color:#3a3a3a}
       </div>
     </div>
 
-    <!-- 달력 + 연관메모 세로 스택 -->
     <div class="side-col">
       <div class="mini-cal">
         <div class="mcal-header">
@@ -153,7 +330,6 @@ textarea::placeholder{color:#3a3a3a}
         </div>
         <div class="mcal-grid" id="cal-grid"></div>
       </div>
-
       <div class="related-panel" id="related-panel" style="display:none">
         <div class="related-header">
           <div class="related-title"><i class="ti ti-link"></i> 연관 기록</div>
@@ -170,10 +346,10 @@ textarea::placeholder{color:#3a3a3a}
   </div>
 </div>
 
-<!-- 커스텀 삭제 확인 다이얼로그 -->
+<!-- 삭제 확인 다이얼로그 -->
 <div class="dialog-overlay" id="dialog-overlay" style="display:none">
   <div class="dialog-box">
-    <div class="dialog-msg">이 메모를 정말 삭제하시겠습니까?</div>
+    <div class="dialog-msg">이 메모를 정말<br>삭제하시겠습니까?</div>
     <div class="dialog-btns">
       <button class="dialog-btn cancel" id="dialog-cancel">취소</button>
       <button class="dialog-btn confirm" id="dialog-confirm">삭제</button>
@@ -202,38 +378,112 @@ const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
 const provider = new GoogleAuthProvider();
 
+// ── 테마 ──────────────────────────────────
+var currentTheme = localStorage.getItem('theme') || 'dark';
+function applyTheme(t) {
+  currentTheme = t;
+  document.documentElement.setAttribute('data-theme', t);
+  var btn = document.getElementById('theme-btn');
+  if (btn) btn.textContent = t === 'dark' ? '☀️' : '🌙';
+  localStorage.setItem('theme', t);
+  drawStones();
+}
+applyTheme(currentTheme);
+
+document.getElementById('theme-btn').addEventListener('click', function() {
+  applyTheme(currentTheme === 'dark' ? 'light' : 'dark');
+});
+
+// ── 바둑알 캔버스 ─────────────────────────
+var canvas = document.getElementById('stone-canvas');
+var ctx = canvas.getContext('2d');
+var stonePositions = [];
+
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  drawStones();
+}
+
+function getStoneColor() {
+  return currentTheme === 'dark'
+    ? { base:'#f0ede8', hl:'rgba(255,255,255,.75)', sh:'rgba(0,0,0,.6)' }
+    : { base:'#1a1208', hl:'rgba(255,255,255,.22)', sh:'rgba(0,0,0,.45)' };
+}
+
+function drawOneStone(x, y, r, col) {
+  // 그림자
+  ctx.save();
+  ctx.shadowColor = col.sh;
+  ctx.shadowBlur = r * 1.2;
+  ctx.shadowOffsetX = r * 0.3;
+  ctx.shadowOffsetY = r * 0.5;
+  // 돌 본체
+  var grad = ctx.createRadialGradient(x - r*0.3, y - r*0.3, r*0.05, x, y, r);
+  grad.addColorStop(0, col.hl);
+  grad.addColorStop(0.45, col.base);
+  grad.addColorStop(1, currentTheme === 'dark' ? '#c8c4be' : '#0a0804');
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, Math.PI*2);
+  ctx.fillStyle = grad;
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawStones() {
+  if (!canvas) return;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  var col = getStoneColor();
+  var r = 7;
+  for (var i = 0; i < stonePositions.length; i++) {
+    var p = stonePositions[i];
+    drawOneStone(p.x, p.y, r, col);
+  }
+}
+
+function generateStonePositions(count) {
+  // 바둑판 격자점에 랜덤 배치 (겹치지 않게)
+  var gridSize = 18;
+  var cols = Math.floor(window.innerWidth / gridSize);
+  var rows = Math.floor(window.innerHeight / gridSize);
+  var allPoints = [];
+  for (var r = 1; r < rows; r++) {
+    for (var c = 1; c < cols; c++) {
+      allPoints.push({ x: c * gridSize + 9, y: r * gridSize + 9 });
+    }
+  }
+  // 셔플
+  for (var i = allPoints.length - 1; i > 0; i--) {
+    var j = Math.floor(Math.random() * (i+1));
+    var tmp = allPoints[i]; allPoints[i] = allPoints[j]; allPoints[j] = tmp;
+  }
+  stonePositions = allPoints.slice(0, Math.min(count, allPoints.length));
+}
+
+function updateStones(memoCount) {
+  // 메모 수 × 3개 돌 (최소 0, 최대 200)
+  var target = Math.min(memoCount * 3, 200);
+  generateStonePositions(target);
+  drawStones();
+}
+
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// ── 공통 ──────────────────────────────────
 const DOW = ['일','월','화','수','목','금','토'];
 const MONTHS = ['1월','2월','3월','4월','5월','6월','7월','8월','9월','10월','11월','12월'];
 const todayObj = new Date();
 const todayKey = dateKey(todayObj);
-let viewYear = todayObj.getFullYear();
-let viewMonth = todayObj.getMonth();
-let selectedKey = null;
-let currentUser = null;
-let allMemos = [];
-let unsubscribe = null;
+var viewYear = todayObj.getFullYear();
+var viewMonth = todayObj.getMonth();
+var selectedKey = null;
+var currentUser = null;
+var allMemos = [];
+var unsubscribe = null;
 
-// ── 커스텀 다이얼로그 ──────────────────────────────
-let dialogResolve = null;
-const dialogOverlay = document.getElementById('dialog-overlay');
-document.getElementById('dialog-confirm').addEventListener('click', () => {
-  dialogOverlay.style.display = 'none';
-  if (dialogResolve) { dialogResolve(true); dialogResolve = null; }
-});
-document.getElementById('dialog-cancel').addEventListener('click', () => {
-  dialogOverlay.style.display = 'none';
-  if (dialogResolve) { dialogResolve(false); dialogResolve = null; }
-});
-function showConfirm() {
-  return new Promise(resolve => {
-    dialogResolve = resolve;
-    dialogOverlay.style.display = 'flex';
-  });
-}
-
-// ── 유틸 ──────────────────────────────────────────
 function showView(name) {
-  ['loading-view','login-view','app-view'].forEach(id => {
+  ['loading-view','login-view','app-view'].forEach(function(id) {
     document.getElementById(id).style.display = (id === name+'-view') ? 'block' : 'none';
   });
 }
@@ -242,22 +492,35 @@ function dateKey(d) {
   return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
 }
 
-// ── 유사 메모 검색 ────────────────────────────────
-// 불용어: 조사/어미/접속사 등 의미 없는 단어 제외
-const SW = '이 그 저 것 수 을 를 가 은 는 에 의 로 으로 와 과 도 만 에서 까지 부터 에게 처럼 같이 보다 이다 있다 없다 하다 되다 그리고 하지만 그러나 또한 그래서 따라서 및 등 들 습니다 합니다 했다 한다 할 하는 된 위해 통해 대한 있는 없는 같은 다른 더 가장 매우 정말 너무 아주 많이 모든 각 여러 한 두 세 오늘 어제 내일 지금 때 일 년 월 시 분 이번 다음 지난 제가 저는 나는 내가 우리 너무 아직 이제 거의 약간 조금 아마 왜 어떻게 무엇 언제 어디'.split(' ');
-const STOP = new Set(SW);
+// ── 삭제 다이얼로그 ───────────────────────
+var dialogResolve = null;
+var dialogOverlay = document.getElementById('dialog-overlay');
+document.getElementById('dialog-confirm').addEventListener('click', function() {
+  dialogOverlay.style.display = 'none';
+  if (dialogResolve) { dialogResolve(true); dialogResolve = null; }
+});
+document.getElementById('dialog-cancel').addEventListener('click', function() {
+  dialogOverlay.style.display = 'none';
+  if (dialogResolve) { dialogResolve(false); dialogResolve = null; }
+});
+function showConfirm() {
+  return new Promise(function(resolve) {
+    dialogResolve = resolve;
+    dialogOverlay.style.display = 'flex';
+  });
+}
+
+// ── 유사 메모 검색 ────────────────────────
+var SW = '이 그 저 것 수 을 를 가 은 는 에 의 로 으로 와 과 도 만 에서 까지 부터 에게 처럼 같이 보다 이다 있다 없다 하다 되다 그리고 하지만 그러나 또한 그래서 따라서 및 등 들 습니다 합니다 했다 한다 할 하는 된 위해 통해 대한 있는 없는 같은 다른 더 가장 매우 정말 너무 아주 많이 모든 각 여러 한 두 세 오늘 어제 내일 지금 때 일 년 월 시 분 이번 다음 지난 제가 저는 나는 내가 우리 아직 이제 거의 조금 아마 왜 어떻게 무엇 언제 어디'.split(' ');
+var STOP = {};
+for (var si = 0; si < SW.length; si++) STOP[SW[si]] = true;
 
 function getWords(text) {
-  // 특수문자 제거 후 공백 분리, 2글자 이상, 불용어 제외, 중복 제거
   var raw = text.replace(/[^\uAC00-\uD7A3a-zA-Z0-9\s]/g, ' ').split(/\s+/);
-  var result = [];
-  var seen = {};
+  var result = []; var seen = {};
   for (var i = 0; i < raw.length; i++) {
     var w = raw[i].trim();
-    if (w.length >= 2 && !STOP.has(w) && !seen[w]) {
-      seen[w] = true;
-      result.push(w);
-    }
+    if (w.length >= 2 && !STOP[w] && !seen[w]) { seen[w]=true; result.push(w); }
   }
   return result;
 }
@@ -267,7 +530,6 @@ function findSimilar(newText, memoList) {
   if (newWords.length === 0) return [];
   var newSet = {};
   for (var i = 0; i < newWords.length; i++) newSet[newWords[i]] = true;
-
   var results = [];
   for (var j = 0; j < memoList.length; j++) {
     var memo = memoList[j];
@@ -276,319 +538,209 @@ function findSimilar(newText, memoList) {
     for (var k = 0; k < memoWords.length; k++) {
       if (newSet[memoWords[k]]) matched.push(memoWords[k]);
     }
-    if (matched.length >= 2) {
-      results.push({ memo: memo, matched: matched });
-    }
+    if (matched.length >= 2) results.push({ memo: memo, matched: matched });
   }
-  results.sort(function(a, b) { return b.matched.length - a.matched.length; });
+  results.sort(function(a,b){ return b.matched.length - a.matched.length; });
   return results.slice(0, 5);
 }
 
 function showRelatedPanel(results) {
   var panel = document.getElementById('related-panel');
   var list = document.getElementById('related-list');
-  if (!results || results.length === 0) {
-    panel.style.display = 'none';
-    return;
-  }
+  if (!results || results.length === 0) { panel.style.display='none'; return; }
   list.innerHTML = '';
   for (var i = 0; i < results.length; i++) {
-    var item = results[i];
-    var memo = item.memo;
-    var matched = item.matched;
+    var item = results[i]; var memo = item.memo; var matched = item.matched;
     var dt = new Date(memo.ts);
-    var mo = dt.getMonth();
     var dateStr = (dt.getMonth()+1)+'월 '+dt.getDate()+'일';
     var hh = String(dt.getHours()).padStart(2,'0');
     var mm = String(dt.getMinutes()).padStart(2,'0');
-    var preview = memo.text.length > 40 ? memo.text.slice(0, 40)+'…' : memo.text;
-
-    var card = document.createElement('div');
-    card.className = 'related-card';
-
-    var textEl = document.createElement('div');
-    textEl.className = 'related-card-text';
-    textEl.textContent = preview;
-
-    var metaEl = document.createElement('div');
-    metaEl.className = 'related-card-meta';
-    metaEl.textContent = dateStr+' '+hh+':'+mm;
-
-    var kwEl = document.createElement('div');
-    kwEl.className = 'related-card-keywords';
-    kwEl.textContent = '# '+matched.slice(0,4).join('  # ');
-
-    card.appendChild(textEl);
-    card.appendChild(metaEl);
-    card.appendChild(kwEl);
-
-    (function(d, day) {
-      card.addEventListener('click', function() {
-        var k = dateKey(d);
-        viewYear = d.getFullYear();
-        viewMonth = d.getMonth();
-        renderCal();
-        selectDay(k, day);
-        window.scrollTo({ top: 0, behavior: 'smooth' });
-      });
-    })(dt, dt.getDate());
-
+    var preview = memo.text.length > 40 ? memo.text.slice(0,40)+'…' : memo.text;
+    var card = document.createElement('div'); card.className='related-card';
+    var tEl = document.createElement('div'); tEl.className='related-card-text'; tEl.textContent=preview;
+    var mEl = document.createElement('div'); mEl.className='related-card-meta'; mEl.textContent=dateStr+' '+hh+':'+mm;
+    var kEl = document.createElement('div'); kEl.className='related-card-keywords'; kEl.textContent='# '+matched.slice(0,4).join('  # ');
+    card.appendChild(tEl); card.appendChild(mEl); card.appendChild(kEl);
+    (function(d,day){ card.addEventListener('click',function(){
+      var k=dateKey(d); viewYear=d.getFullYear(); viewMonth=d.getMonth();
+      renderCal(); selectDay(k,day); window.scrollTo({top:0,behavior:'smooth'});
+    }); })(dt, dt.getDate());
     list.appendChild(card);
   }
-  panel.style.display = 'block';
+  panel.style.display='block';
 }
 
 document.getElementById('related-close').addEventListener('click', function() {
-  document.getElementById('related-panel').style.display = 'none';
+  document.getElementById('related-panel').style.display='none';
 });
 
-// ── 달력 ──────────────────────────────────────────
+// ── 달력 ──────────────────────────────────
 function activeDates() {
-  const s = new Set();
-  allMemos.forEach(m => s.add(dateKey(new Date(m.ts))));
-  return s;
+  var s = {}; allMemos.forEach(function(m){ s[dateKey(new Date(m.ts))]=true; }); return s;
 }
 
 function renderCal() {
-  const calTitle = document.getElementById('cal-title');
-  const calGrid = document.getElementById('cal-grid');
+  var calTitle = document.getElementById('cal-title');
+  var calGrid  = document.getElementById('cal-grid');
   calTitle.textContent = viewYear+'년 '+MONTHS[viewMonth];
   calGrid.innerHTML = '';
-  DOW.forEach(d => {
-    const el = document.createElement('div');
-    el.className = 'mcal-dow'; el.textContent = d; calGrid.appendChild(el);
+  DOW.forEach(function(d){
+    var el=document.createElement('div'); el.className='mcal-dow'; el.textContent=d; calGrid.appendChild(el);
   });
-  const active = activeDates();
-  const firstDay = new Date(viewYear, viewMonth, 1).getDay();
-  const daysInMonth = new Date(viewYear, viewMonth+1, 0).getDate();
-  for (let i = 0; i < firstDay; i++) {
-    const el = document.createElement('div'); el.className = 'mcal-day empty'; calGrid.appendChild(el);
-  }
-  for (let d = 1; d <= daysInMonth; d++) {
-    const el = document.createElement('div');
-    const k = viewYear+'-'+String(viewMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
-    el.className = 'mcal-day'; el.textContent = d;
-    if (k === todayKey) el.classList.add('today');
-    if (active.has(k)) el.classList.add('active');
-    if (k === selectedKey) el.classList.add('selected');
-    if (active.has(k)) el.addEventListener('click', () => selectDay(k, d));
+  var active = activeDates();
+  var firstDay = new Date(viewYear,viewMonth,1).getDay();
+  var daysInMonth = new Date(viewYear,viewMonth+1,0).getDate();
+  for (var i=0;i<firstDay;i++){var el=document.createElement('div');el.className='mcal-day empty';calGrid.appendChild(el);}
+  for (var d=1;d<=daysInMonth;d++){
+    var el=document.createElement('div');
+    var k=viewYear+'-'+String(viewMonth+1).padStart(2,'0')+'-'+String(d).padStart(2,'0');
+    el.className='mcal-day'; el.textContent=d;
+    if (k===todayKey) el.classList.add('today');
+    if (active[k]) el.classList.add('active');
+    if (k===selectedKey) el.classList.add('selected');
+    if (active[k]) (function(kk,dd){ el.addEventListener('click',function(){ selectDay(kk,dd); }); })(k,d);
     calGrid.appendChild(el);
   }
 }
 
-// ── 메모 패널 ─────────────────────────────────────
-function selectDay(k, d) {
-  selectedKey = k; renderCal();
-  const memos = allMemos
-    .filter(m => dateKey(new Date(m.ts)) === k)
-    .sort((a, b) => b.ts - a.ts);
-  const parts = k.split('-');
-  const memoPanel = document.getElementById('memo-panel');
-  const panelTitle = document.getElementById('panel-title');
-  const memoList = document.getElementById('memo-list');
-  panelTitle.textContent = parts[0]+'년 '+MONTHS[parseInt(parts[1])-1]+' '+parseInt(parts[2])+'일 — 메모 '+memos.length+'개';
-  memoList.innerHTML = '';
-  if (memos.length === 0) {
-    const e = document.createElement('div');
-    e.className = 'empty-day'; e.textContent = '이 날엔 메모가 없어요'; memoList.appendChild(e);
+// ── 메모 패널 ─────────────────────────────
+function selectDay(k,d) {
+  selectedKey=k; renderCal();
+  var memos = allMemos.filter(function(m){ return dateKey(new Date(m.ts))===k; }).sort(function(a,b){ return b.ts-a.ts; });
+  var parts=k.split('-');
+  var memoPanel=document.getElementById('memo-panel');
+  var panelTitle=document.getElementById('panel-title');
+  var memoList=document.getElementById('memo-list');
+  panelTitle.textContent=parts[0]+'년 '+MONTHS[parseInt(parts[1])-1]+' '+parseInt(parts[2])+'일 — 메모 '+memos.length+'개';
+  memoList.innerHTML='';
+  if (memos.length===0){
+    var e=document.createElement('div'); e.className='empty-day'; e.textContent='이 날엔 메모가 없어요'; memoList.appendChild(e);
   } else {
-    memos.forEach(memo => {
-      const card = document.createElement('div'); card.className = 'memo-card';
-      const dt = new Date(memo.ts);
-      const hh = String(dt.getHours()).padStart(2,'0');
-      const mm = String(dt.getMinutes()).padStart(2,'0');
-      card.innerHTML =
-        '<div class="memo-content"><div class="memo-text"></div><div class="memo-time">'+hh+':'+mm+'</div></div>'+
-        '<button class="del-btn" aria-label="삭제"><i class="ti ti-x"></i></button>';
-      card.querySelector('.memo-text').textContent = memo.text;
-      card.querySelector('.del-btn').addEventListener('click', async () => {
-        const ok = await showConfirm();
-        if (!ok) return;
-        await deleteDoc(doc(db, 'memos', memo.id));
-      });
+    memos.forEach(function(memo){
+      var card=document.createElement('div'); card.className='memo-card';
+      var dt=new Date(memo.ts);
+      var hh=String(dt.getHours()).padStart(2,'0'); var mm=String(dt.getMinutes()).padStart(2,'0');
+      card.innerHTML='<div class="memo-content"><div class="memo-text"></div><div class="memo-time">'+hh+':'+mm+'</div></div><button class="del-btn" aria-label="삭제"><i class="ti ti-x"></i></button>';
+      card.querySelector('.memo-text').textContent=memo.text;
+      (function(id){ card.querySelector('.del-btn').addEventListener('click',async function(){
+        var ok=await showConfirm(); if(!ok)return;
+        await deleteDoc(doc(db,'memos',id));
+      }); })(memo.id);
       memoList.appendChild(card);
     });
   }
-  memoPanel.style.display = 'block';
+  memoPanel.style.display='block';
 }
 
-// ── Firestore 구독 ────────────────────────────────
+// ── Firestore 구독 ────────────────────────
 function subscribeToMemos(uid) {
   if (unsubscribe) unsubscribe();
-  const q = query(collection(db, 'memos'), where('uid', '==', uid));
-  unsubscribe = onSnapshot(q, snapshot => {
-    allMemos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+  var q = query(collection(db,'memos'), where('uid','==',uid));
+  unsubscribe = onSnapshot(q, function(snapshot){
+    allMemos = snapshot.docs.map(function(d){ return Object.assign({id:d.id},d.data()); });
+    updateStones(allMemos.length);  // 메모 수 → 바둑알 수 갱신
     renderCal();
-    if (selectedKey) {
-      const still = allMemos.some(m => dateKey(new Date(m.ts)) === selectedKey);
-      if (still) selectDay(selectedKey, parseInt(selectedKey.split('-')[2]));
-      else { document.getElementById('memo-panel').style.display = 'none'; selectedKey = null; }
+    if (selectedKey){
+      var still=allMemos.some(function(m){ return dateKey(new Date(m.ts))===selectedKey; });
+      if (still) selectDay(selectedKey,parseInt(selectedKey.split('-')[2]));
+      else { document.getElementById('memo-panel').style.display='none'; selectedKey=null; }
     }
-  }, err => console.error('Firestore 오류:', err));
+  }, function(err){ console.error('Firestore 오류:',err); });
 }
 
-// ── 메모 저장 ─────────────────────────────────────
+// ── 메모 저장 ─────────────────────────────
 function addMemo() {
-  var input = document.getElementById('memo-input');
-  var text = input.value.trim();
-  if (!text || !currentUser) return;
-
-  // 저장 전 기존 메모 목록 복사 (새 메모 자신 제외)
-  var memosBefore = allMemos.slice();
-
-  addDoc(collection(db, 'memos'), { uid: currentUser.uid, text: text, ts: Date.now() })
-    .then(function() {
-      // addDoc 완료 후 — memosBefore 기준으로 유사 메모 검색
-      var similar = findSimilar(text, memosBefore);
-
-      input.value = '';
-      document.getElementById('char-count').textContent = '0 / 10,000';
-      document.getElementById('char-count').style.color = '#444';
-      var sb = document.getElementById('save-btn');
-      sb.disabled = true;
-      sb.style.background = '#2a2a2a';
-      sb.querySelector('i').style.color = '#484848';
-      viewYear = todayObj.getFullYear();
-      viewMonth = todayObj.getMonth();
-      renderCal();
-      selectDay(todayKey, todayObj.getDate());
+  var input=document.getElementById('memo-input');
+  var text=input.value.trim();
+  if (!text||!currentUser) return;
+  var memosBefore=allMemos.slice();
+  addDoc(collection(db,'memos'),{uid:currentUser.uid,text:text,ts:Date.now()})
+    .then(function(){
+      var similar=findSimilar(text,memosBefore);
+      input.value='';
+      document.getElementById('char-count').textContent='0 / 10,000';
+      document.getElementById('char-count').style.color='';
+      var sb=document.getElementById('save-btn');
+      sb.disabled=true; sb.style.opacity='';
+      viewYear=todayObj.getFullYear(); viewMonth=todayObj.getMonth();
+      renderCal(); selectDay(todayKey,todayObj.getDate());
       showRelatedPanel(similar);
     })
-    .catch(function(err) { console.error('저장 오류:', err); });
+    .catch(function(err){ console.error('저장 오류:',err); });
 }
 
-// ── 인증 ──────────────────────────────────────────
-onAuthStateChanged(auth, user => {
-  if (user) {
-    currentUser = user;
-    document.getElementById('user-avatar').src = user.photoURL || '';
-    document.getElementById('user-name').textContent = user.displayName || user.email;
-    document.getElementById('today-display').textContent =
+// ── 인증 ──────────────────────────────────
+onAuthStateChanged(auth, function(user){
+  if (user){
+    currentUser=user;
+    document.getElementById('user-avatar').src=user.photoURL||'';
+    document.getElementById('user-name').textContent=user.displayName||user.email;
+    document.getElementById('today-display').textContent=
       todayObj.getFullYear()+'년 '+MONTHS[todayObj.getMonth()]+' '+todayObj.getDate()+'일 '+DOW[todayObj.getDay()]+'요일';
     subscribeToMemos(user.uid);
     showView('app');
   } else {
-    currentUser = null;
-    if (unsubscribe) { unsubscribe(); unsubscribe = null; }
-    allMemos = [];
+    currentUser=null;
+    if(unsubscribe){unsubscribe();unsubscribe=null;}
+    allMemos=[]; updateStones(0);
     showView('login');
   }
 });
 
-document.getElementById('google-login-btn').addEventListener('click', async () => {
-  const err = document.getElementById('login-err');
-  err.style.display = 'none';
-  try { await signInWithPopup(auth, provider); }
-  catch(e) { console.error(e); err.style.display = 'block'; }
+document.getElementById('google-login-btn').addEventListener('click', async function(){
+  var err=document.getElementById('login-err'); err.style.display='none';
+  try{ await signInWithPopup(auth,provider); }
+  catch(e){ console.error(e); err.style.display='block'; }
 });
+document.getElementById('logout-btn').addEventListener('click', function(){ signOut(auth); });
 
-document.getElementById('logout-btn').addEventListener('click', () => signOut(auth));
+// ── 입력 UI ───────────────────────────────
+function updateInputUI(){
+  var input=document.getElementById('memo-input');
+  var len=input.value.length;
+  var cc=document.getElementById('char-count');
+  var sb=document.getElementById('save-btn');
+  cc.textContent=len.toLocaleString()+' / 10,000';
+  cc.style.color=len>9000?'#e24b4a':'';
+  sb.disabled=len===0;
+}
 
-document.getElementById('memo-input').addEventListener('input', () => {
-  const input = document.getElementById('memo-input');
-  const len = input.value.length;
-  const cc = document.getElementById('char-count');
-  const sb = document.getElementById('save-btn');
-  cc.textContent = len.toLocaleString()+' / 10,000';
-  cc.style.color = len > 9000 ? '#e24b4a' : '#444';
-  sb.disabled = len === 0;
-  sb.style.background = len === 0 ? '#2a2a2a' : '#e8e6e0';
-  sb.querySelector('i').style.color = len === 0 ? '#484848' : '#0f0f0f';
-});
-document.getElementById('memo-input').addEventListener('keydown', e => {
-  if ((e.ctrlKey||e.metaKey) && e.key==='Enter') { e.preventDefault(); addMemo(); }
+document.getElementById('memo-input').addEventListener('input', updateInputUI);
+document.getElementById('memo-input').addEventListener('keydown', function(e){
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();addMemo();}
 });
 document.getElementById('save-btn').addEventListener('click', addMemo);
-document.getElementById('prev-btn').addEventListener('click', () => {
+document.getElementById('prev-btn').addEventListener('click', function(){
   viewMonth--; if(viewMonth<0){viewMonth=11;viewYear--;} renderCal();
 });
-document.getElementById('next-btn').addEventListener('click', () => {
+document.getElementById('next-btn').addEventListener('click', function(){
   viewMonth++; if(viewMonth>11){viewMonth=0;viewYear++;} renderCal();
 });
 
-// ── 음성 입력 (Web Speech API) ────────────────────
-(function() {
-  var micBtn = document.getElementById('mic-btn');
-  var micIcon = document.getElementById('mic-icon');
-  var memoInput = document.getElementById('memo-input');
-
-  var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    micBtn.title = '이 브라우저는 음성 입력을 지원하지 않아요 (Chrome 권장)';
-    micBtn.style.opacity = '0.3';
-    micBtn.style.cursor = 'not-allowed';
-    return;
-  }
-
-  var recog = new SpeechRecognition();
-  recog.lang = 'ko-KR';
-  recog.continuous = true;       // 말하는 동안 계속 인식
-  recog.interimResults = true;   // 중간 결과도 실시간 표시
-
-  var isRecording = false;
-  var baseText = '';             // 음성 시작 전 이미 입력된 텍스트
-
-  function updateInputUI() {
-    var len = memoInput.value.length;
-    var cc = document.getElementById('char-count');
-    var sb = document.getElementById('save-btn');
-    cc.textContent = len.toLocaleString() + ' / 10,000';
-    cc.style.color = len > 9000 ? '#e24b4a' : '#444';
-    sb.disabled = len === 0;
-    sb.style.background = len === 0 ? '#2a2a2a' : '#e8e6e0';
-    sb.querySelector('i').style.color = len === 0 ? '#484848' : '#0f0f0f';
-  }
-
-  recog.onresult = function(e) {
-    var interim = '';
-    var final = '';
-    for (var i = e.resultIndex; i < e.results.length; i++) {
-      var t = e.results[i][0].transcript;
-      if (e.results[i].isFinal) final += t;
-      else interim += t;
+// ── 음성 입력 ─────────────────────────────
+(function(){
+  var micBtn=document.getElementById('mic-btn');
+  var micIcon=document.getElementById('mic-icon');
+  var memoInput=document.getElementById('memo-input');
+  var SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!SR){micBtn.style.opacity='.3';micBtn.style.cursor='not-allowed';micBtn.title='Chrome 권장';return;}
+  var recog=new SR(); recog.lang='ko-KR'; recog.continuous=true; recog.interimResults=true;
+  var isRec=false; var baseText='';
+  recog.onresult=function(e){
+    var interim=''; var fin='';
+    for(var i=e.resultIndex;i<e.results.length;i++){
+      var t=e.results[i][0].transcript;
+      if(e.results[i].isFinal)fin+=t; else interim+=t;
     }
-    // 확정된 텍스트는 baseText에 누적, 중간 결과는 미리보기
-    if (final) baseText += final;
-    memoInput.value = baseText + interim;
+    if(fin)baseText+=fin;
+    memoInput.value=baseText+interim;
     updateInputUI();
   };
-
-  recog.onerror = function(e) {
-    console.error('음성 인식 오류:', e.error);
-    stopRecording();
-  };
-
-  recog.onend = function() {
-    if (isRecording) {
-      // 말이 잠깐 끊겨도 계속 인식 유지
-      try { recog.start(); } catch(e) {}
-    }
-  };
-
-  function startRecording() {
-    isRecording = true;
-    baseText = memoInput.value;  // 기존 텍스트 보존
-    micBtn.classList.add('recording');
-    micIcon.className = 'ti ti-microphone-off';
-    micBtn.title = '클릭하면 음성 입력 종료';
-    try { recog.start(); } catch(e) {}
-  }
-
-  function stopRecording() {
-    isRecording = false;
-    recog.stop();
-    micBtn.classList.remove('recording');
-    micIcon.className = 'ti ti-microphone';
-    micBtn.title = '음성 입력';
-    // 중간 결과 없이 최종 텍스트만 유지
-    memoInput.value = baseText;
-    updateInputUI();
-  }
-
-  micBtn.addEventListener('click', function() {
-    if (isRecording) stopRecording();
-    else startRecording();
-  });
+  recog.onerror=function(){ stopRec(); };
+  recog.onend=function(){ if(isRec){try{recog.start();}catch(e){}} };
+  function startRec(){isRec=true;baseText=memoInput.value;micBtn.classList.add('recording');micIcon.className='ti ti-microphone-off';try{recog.start();}catch(e){}}
+  function stopRec(){isRec=false;recog.stop();micBtn.classList.remove('recording');micIcon.className='ti ti-microphone';memoInput.value=baseText;updateInputUI();}
+  micBtn.addEventListener('click',function(){ if(isRec)stopRec(); else startRec(); });
 })();
 </script>
 </body>
