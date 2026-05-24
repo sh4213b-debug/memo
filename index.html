@@ -129,6 +129,9 @@ body::before {
 .theme-btn:hover{transform:scale(1.1)}
 .logout-btn{background:none;border:0.5px solid var(--ui-border);border-radius:6px;color:var(--ui-sub);padding:4px 10px;font-size:11px;cursor:pointer;transition:color .12s,border-color .12s;font-family:inherit}
 .logout-btn:hover{color:var(--ui-text);border-color:var(--ui-sub)}
+.export-btn{background:none;border:0.5px solid var(--ui-border);border-radius:6px;color:var(--ui-sub);padding:4px 8px;font-size:14px;cursor:pointer;transition:color .12s,border-color .12s,transform .1s;line-height:1;display:flex;align-items:center}
+.export-btn:hover{color:var(--ui-text);border-color:var(--ui-sub);transform:scale(1.08)}
+.export-btn:active{transform:scale(.95)}
 
 /* ── 메인 레이아웃 ────────────────────────── */
 .main-row{display:flex;gap:1rem;align-items:flex-start;margin-bottom:1.5rem}
@@ -267,6 +270,17 @@ textarea::placeholder{color:var(--ui-muted)}
 .dialog-btn.cancel:hover{opacity:.8}
 .dialog-btn.confirm{background:#e24b4a;color:#fff}
 .dialog-btn.confirm:hover{opacity:.85}
+
+/* ── 토스트 알림 ──────────────────────────── */
+.toast{
+  position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(20px);
+  background:var(--dialog-bg);color:var(--dialog-text);
+  padding:.75rem 1.5rem;border-radius:50px;font-size:13px;font-weight:500;
+  box-shadow:0 8px 32px rgba(0,0,0,.35);
+  opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;z-index:2000;
+  white-space:nowrap;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
@@ -299,6 +313,9 @@ textarea::placeholder{color:var(--ui-muted)}
     </div>
     <div class="header-right">
       <button class="theme-btn" id="theme-btn" title="테마 전환">☀️</button>
+      <button class="export-btn" id="export-btn" title="전체 메모 txt로 내보내기"><i class="ti ti-download"></i></button>
+      <button class="export-btn" id="import-btn" title="txt 파일로 메모 가져오기"><i class="ti ti-upload"></i></button>
+      <input type="file" id="import-file" accept=".txt" style="display:none">
       <img class="user-avatar" id="user-avatar" src="" alt="">
       <span class="user-name" id="user-name"></span>
       <button class="logout-btn" id="logout-btn">로그아웃</button>
@@ -356,6 +373,9 @@ textarea::placeholder{color:var(--ui-muted)}
     </div>
   </div>
 </div>
+
+<!-- 토스트 알림 -->
+<div class="toast" id="toast"></div>
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
@@ -820,6 +840,204 @@ document.getElementById('google-login-btn').addEventListener('click', async func
   catch(e){ console.error(e); err.style.display='block'; }
 });
 document.getElementById('logout-btn').addEventListener('click', function(){ signOut(auth); });
+
+// ── txt 내보내기 ──────────────────────────
+document.getElementById('export-btn').addEventListener('click', function() {
+  if (!allMemos || allMemos.length === 0) {
+    alert('내보낼 메모가 없어요.');
+    return;
+  }
+
+  // 날짜순(오래된 것부터) 정렬
+  var sorted = allMemos.slice().sort(function(a, b) { return a.ts - b.ts; });
+
+  var lines = [];
+  lines.push('■ 메모 전체 내보내기');
+  lines.push('내보낸 날짜: ' + formatFull(new Date()));
+  lines.push('총 메모 수: ' + sorted.length + '개');
+  lines.push('');
+  lines.push('═'.repeat(40));
+  lines.push('');
+
+  var prevDateStr = '';
+  for (var i = 0; i < sorted.length; i++) {
+    var memo = sorted[i];
+    var dt = new Date(memo.ts);
+    var dateStr = formatDate(dt);
+    var timeStr = formatTime(dt);
+
+    // 날짜가 바뀌면 날짜 헤더 출력
+    if (dateStr !== prevDateStr) {
+      if (i > 0) lines.push('');
+      lines.push('▶ ' + dateStr);
+      lines.push('─'.repeat(30));
+      prevDateStr = dateStr;
+    }
+
+    lines.push('[' + timeStr + ']');
+    lines.push(memo.text);
+    lines.push('');
+  }
+
+  lines.push('═'.repeat(40));
+
+  var content = lines.join('\n');
+  var blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = '메모_' + formatDateFile(new Date()) + '.txt';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+});
+
+function formatDate(dt) {
+  var days = ['일','월','화','수','목','금','토'];
+  return dt.getFullYear() + '년 ' + (dt.getMonth()+1) + '월 ' + dt.getDate() + '일 (' + days[dt.getDay()] + ')';
+}
+function formatTime(dt) {
+  return String(dt.getHours()).padStart(2,'0') + ':' + String(dt.getMinutes()).padStart(2,'0');
+}
+function formatFull(dt) {
+  return formatDate(dt) + ' ' + formatTime(dt);
+}
+function formatDateFile(dt) {
+  return dt.getFullYear() + String(dt.getMonth()+1).padStart(2,'0') + String(dt.getDate()).padStart(2,'0');
+}
+
+// ── 토스트 ────────────────────────────────
+var toastTimer = null;
+function showToast(msg, duration) {
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  if (toastTimer) clearTimeout(toastTimer);
+  toastTimer = setTimeout(function() { t.classList.remove('show'); }, duration || 2500);
+}
+
+// ── txt 가져오기 ──────────────────────────
+document.getElementById('import-btn').addEventListener('click', function() {
+  document.getElementById('import-file').value = ''; // 같은 파일 재선택 허용
+  document.getElementById('import-file').click();
+});
+
+document.getElementById('import-file').addEventListener('change', function(e) {
+  var file = e.target.files[0];
+  if (!file) return;
+  if (!currentUser) { showToast('로그인 후 가져오기를 이용해 주세요.'); return; }
+
+  var reader = new FileReader();
+  reader.onload = function(ev) {
+    var text = ev.target.result;
+    var parsed = parseTxt(text);
+
+    if (parsed.length === 0) {
+      showToast('인식 가능한 메모를 찾지 못했어요.'); return;
+    }
+
+    // 업로드 확인
+    if (!confirm('총 ' + parsed.length + '개의 메모를 가져올까요?\n기존 메모는 삭제되지 않고 추가돼요.')) return;
+
+    uploadParsed(parsed);
+  };
+  reader.readAsText(file, 'utf-8');
+});
+
+// ── 파싱: 내보내기 형식 + 자유 형식 모두 지원 ──
+function parseTxt(text) {
+  var results = [];
+  var lines = text.split(/\r?\n/);
+
+  var currentDate = null;  // Date 객체
+  var currentTime = null;  // { h, m }
+  var contentLines = [];
+
+  function flushMemo() {
+    if (!currentDate || contentLines.length === 0) return;
+    var body = contentLines.join('\n').trim();
+    if (!body) return;
+    // 날짜 + 시간 합쳐서 timestamp 만들기
+    var d = new Date(currentDate.getTime());
+    if (currentTime) { d.setHours(currentTime.h); d.setMinutes(currentTime.m); d.setSeconds(0); }
+    else { d.setHours(9); d.setMinutes(0); d.setSeconds(0); }
+    results.push({ text: body, ts: d.getTime() });
+    contentLines = [];
+    currentTime = null;
+  }
+
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i].trim();
+    if (!line) continue;
+
+    // ── 날짜 헤더 패턴 감지 ──────────────────────
+    // 예) "▶ 2026년 5월 24일 (일)"  /  "2026년 5월 24일"  /  "2026-05-24"  /  "2026/05/24"
+    var dateMatch =
+      line.match(/(\d{4})년\s*(\d{1,2})월\s*(\d{1,2})일/) ||
+      line.match(/(\d{4})[\/\-](\d{1,2})[\/\-](\d{1,2})/);
+
+    if (dateMatch) {
+      flushMemo();
+      currentDate = new Date(
+        parseInt(dateMatch[1]),
+        parseInt(dateMatch[2]) - 1,
+        parseInt(dateMatch[3])
+      );
+      currentTime = null;
+      continue;
+    }
+
+    // ── 시간 패턴 감지 ───────────────────────────
+    // 예) "[09:15]"  /  "09:15"
+    var timeMatch = line.match(/^\[?(\d{1,2}):(\d{2})\]?$/);
+    if (timeMatch) {
+      flushMemo();
+      currentTime = { h: parseInt(timeMatch[1]), m: parseInt(timeMatch[2]) };
+      continue;
+    }
+
+    // ── 구분선 / 헤더 행 무시 ────────────────────
+    if (/^[═─=\-─]{5,}/.test(line)) continue;
+    if (/^■/.test(line)) continue;
+    if (/^(내보낸 날짜|총 메모 수):/.test(line)) continue;
+
+    // ── 내용 행 ──────────────────────────────────
+    if (currentDate) {
+      contentLines.push(lines[i].trimEnd()); // 왼쪽 공백만 제거
+    }
+  }
+  flushMemo(); // 마지막 메모 처리
+  return results;
+}
+
+// ── Firestore 일괄 업로드 ─────────────────
+function uploadParsed(parsed) {
+  showToast('업로드 중... 0 / ' + parsed.length, 60000);
+  var done = 0;
+  var failed = 0;
+
+  function next(idx) {
+    if (idx >= parsed.length) {
+      if (failed > 0) showToast('완료! ' + done + '개 추가, ' + failed + '개 실패', 4000);
+      else showToast('✓ ' + done + '개 메모를 성공적으로 가져왔어요!', 3500);
+      return;
+    }
+    var item = parsed[idx];
+    addDoc(collection(db, 'memos'), { uid: currentUser.uid, text: item.text, ts: item.ts })
+      .then(function() {
+        done++;
+        showToast('업로드 중... ' + done + ' / ' + parsed.length, 60000);
+        next(idx + 1);
+      })
+      .catch(function(err) {
+        console.error('업로드 실패:', err);
+        failed++;
+        next(idx + 1);
+      });
+  }
+  next(0);
+}
 
 // ── 입력 UI ───────────────────────────────
 function updateInputUI(){
