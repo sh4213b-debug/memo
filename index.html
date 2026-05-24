@@ -321,71 +321,96 @@ textarea::placeholder{color:var(--ui-muted)}
 /* ── 모바일 반응형 ────────────────────────── */
 @media (max-width: 600px) {
   :root {
-    --margin: 0.4cm;       /* 모바일에서 여백 줄이기 */
-    --cell-w: 22px;        /* 바둑판 격자 모바일 크기 */
+    --margin: 0.4cm;
+    --cell-w: 22px;
     --cell-h: 23.5px;
   }
 
   .app { padding: 1rem .875rem; }
 
   /* 헤더 */
-  .app-header { margin-bottom: 1rem; gap:.5rem; flex-wrap:wrap; }
-  .date-text { font-size: 16px; }
+  .app-header { margin-bottom: 1rem; gap:.5rem; }
+  .date-text { font-size: 17px; }
   .date-label { font-size: 9px; }
-  .user-name { display: none; }           /* 이름 숨기고 아바타만 */
+  .user-name { display: none; }
   .header-right { gap: .4rem; }
   .logout-btn { padding: 4px 8px; font-size: 10px; }
   .export-btn { padding: 4px 6px; font-size: 13px; }
   .theme-btn { padding: 4px 6px; font-size: 13px; }
 
-  /* 메인 레이아웃: 세로 스택으로 전환 */
+  /* 메인 레이아웃: 완전 세로 스택 */
   .main-row {
     flex-direction: column;
     gap: .75rem;
     margin-bottom: 1rem;
   }
 
-  /* 입력창 */
-  .compose { border-radius: 12px; padding: .875rem 1rem; }
-  textarea { font-size: 16px; min-height: 72px; } /* 16px 이상이어야 iOS 줌 방지 */
+  /* 입력창: 가로 꽉 차게 */
+  .compose {
+    width: 100%;
+    border-radius: 12px;
+    padding: .875rem 1rem;
+  }
+  textarea {
+    font-size: 16px;
+    min-height: 100px;
+    width: 100%;
+  }
 
   /* 저장 버튼 */
   .save-stone { width: 38px; height: 38px; }
   .save-stone i { font-size: 15px; }
 
-  /* 사이드 컬럼: 가로 전체 폭 */
-  .side-col { width: 100%; flex-direction: row; gap: .625rem; align-items: flex-start; }
+  /* 사이드 컬럼: 가로 꽉 차게, 달력만 세로 */
+  .side-col {
+    width: 100%;
+    flex-direction: column;
+    gap: .625rem;
+  }
 
-  /* 미니 달력: 모바일에서 가로 절반 차지 */
-  .mini-cal { flex: 1; min-width: 0; }
-  .mcal-title { font-size: 11px; }
-  .mcal-dow { font-size: 9px; padding: 3px 0; }
-  .mcal-day { font-size: 10px; }
-  .mcal-day.active { font-size: 9px; }
+  /* 달력: 입력창과 동일한 가로 폭, 크기는 컴팩트하게 */
+  .mini-cal {
+    width: 100%;
+    padding: .5rem .75rem;
+  }
+  .mcal-header { margin-bottom: .4rem; }
+  .mcal-title { font-size: 12px; }
+  .mcal-nav { font-size: 13px; }
+  /* 달력 칸 크기 줄이기 — 7칸이 가로에 맞게 */
+  .mcal-grid { gap: 2px; }
+  .mcal-dow { font-size: 10px; padding: 3px 0; }
+  .mcal-day { font-size: 11px; }
+  .mcal-day.active { font-size: 10px; }
 
-  /* 연관 기록: 카드 너비 줄이기 */
-  .related-card { width: 120px; }
+  /* 연관 기록 */
+  .related-card { width: 130px; }
   .related-panel { padding: .5rem .625rem; margin-bottom: 1rem; }
+  .related-card-text { font-size: 12px; }
+  .related-card-meta { font-size: 10px; }
 
   /* 메모 카드 */
-  .memo-card { padding: .625rem .875rem; border-radius: 10px; }
-  .memo-text { font-size: 14px; }
-  .memo-time { font-size: 10px; }
-  .memo-panel-title { font-size: 10px; }
+  .memo-card { padding: .75rem .875rem; border-radius: 10px; }
+  .memo-text { font-size: 15px; }
+  .memo-time { font-size: 11px; }
+  .memo-panel-title { font-size: 11px; }
+  .empty-day { font-size: 14px; }
 
   /* 다이얼로그 */
   .dialog-box { padding: 1.5rem 1.25rem; }
-  .dialog-msg { font-size: 14px; }
+  .dialog-msg { font-size: 15px; }
   .dialog-btn { padding: 8px 20px; font-size: 13px; }
 
   /* 토스트 */
-  .toast { font-size: 12px; padding: .625rem 1.25rem; white-space: normal; text-align: center; max-width: 85vw; }
+  .toast {
+    font-size: 12px; padding: .625rem 1.25rem;
+    white-space: normal; text-align: center; max-width: 85vw;
+  }
 }
 
 @media (max-width: 380px) {
-  .date-text { font-size: 14px; }
-  .side-col { flex-direction: column; }
-  .mini-cal { width: 100%; }
+  .date-text { font-size: 15px; }
+  .mcal-dow { font-size: 9px; }
+  .mcal-day { font-size: 10px; }
 }
 </style>
 </head>
