@@ -39,6 +39,7 @@ textarea::placeholder{color:#3a3a3a}
 .compose-footer{display:flex;justify-content:flex-end;margin-top:.5rem;padding-top:.5rem;border-top:0.5px solid #222}
 .char-count{font-size:11px;color:#444}
 .mini-cal{background:#1a1a1a;border:0.5px solid #2a2a2a;border-radius:10px;padding:.5rem .6rem;width:148px;flex-shrink:0}
+.side-col{display:flex;flex-direction:column;gap:.625rem;width:148px;flex-shrink:0}
 .mcal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.35rem}
 .mcal-title{font-size:10px;font-weight:500;color:#aaa}
 .mcal-nav{background:none;border:none;cursor:pointer;color:#555;padding:1px 3px;border-radius:4px;transition:color .12s;font-size:12px;line-height:1}
@@ -66,29 +67,29 @@ textarea::placeholder{color:#3a3a3a}
 .loading{display:flex;align-items:center;justify-content:center;min-height:80vh;font-size:14px;color:#444}
 
 /* 커스텀 확인 다이얼로그 */
-.dialog-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;z-index:1000;animation:fadeIn .15s ease}
-.dialog-box{background:#1e1e1e;border:0.5px solid #333;border-radius:14px;padding:1.5rem 1.75rem;max-width:320px;width:90%;text-align:center}
+.dialog-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:1000;animation:fadeIn .15s ease}
+.dialog-box{background:#0f0f0f;border:0.5px solid #2a2a2a;border-radius:14px;padding:1.5rem 1.75rem;max-width:320px;width:90%;text-align:center}
 .dialog-msg{font-size:15px;color:#e8e6e0;margin-bottom:1.25rem;line-height:1.6}
 .dialog-btns{display:flex;gap:.75rem;justify-content:center}
 .dialog-btn{padding:8px 24px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;border:none;font-family:inherit;transition:opacity .12s}
-.dialog-btn.cancel{background:#2a2a2a;color:#888}
+.dialog-btn.cancel{background:#1e1e1e;color:#888;border:0.5px solid #333}
 .dialog-btn.cancel:hover{opacity:.8}
 .dialog-btn.confirm{background:#e24b4a;color:#fff}
 .dialog-btn.confirm:hover{opacity:.85}
 
-/* 연관 메모 패널 */
-.related-panel{background:#16161e;border:0.5px solid #2e2a4a;border-radius:12px;padding:1rem 1.25rem;margin-top:1.25rem;animation:fadeIn .2s ease}
-.related-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.75rem}
-.related-title{font-size:12px;color:#8b87c4;font-weight:500;display:flex;align-items:center;gap:.4rem}
-.related-title i{font-size:14px}
-.related-close{background:none;border:none;cursor:pointer;color:#444;font-size:15px;padding:2px 4px;border-radius:4px;transition:color .12s}
+/* 연관 메모 패널 — 사이드바 컴팩트 */
+.related-panel{background:#16161e;border:0.5px solid #2e2a4a;border-radius:10px;padding:.5rem .6rem;width:148px;animation:fadeIn .2s ease}
+.related-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:.4rem}
+.related-title{font-size:9px;color:#8b87c4;font-weight:500;display:flex;align-items:center;gap:.3rem;letter-spacing:.02em}
+.related-title i{font-size:11px}
+.related-close{background:none;border:none;cursor:pointer;color:#444;font-size:12px;padding:1px 3px;border-radius:3px;line-height:1;transition:color .12s}
 .related-close:hover{color:#8b87c4}
-.related-list{display:flex;flex-direction:column;gap:.4rem}
-.related-card{background:#1a1828;border:0.5px solid #2e2a4a;border-radius:8px;padding:.625rem .875rem;cursor:pointer;transition:border-color .12s}
+.related-list{display:flex;flex-direction:column;gap:.35rem}
+.related-card{background:#1a1828;border:0.5px solid #2e2a4a;border-radius:6px;padding:.4rem .5rem;cursor:pointer;transition:border-color .12s}
 .related-card:hover{border-color:#534AB7}
-.related-card-text{font-size:12px;color:#9896b8;line-height:1.55;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.related-card-meta{font-size:11px;color:#3a3860;margin-top:.3rem}
-.related-card-keywords{font-size:10px;color:#534AB7;margin-top:.25rem}
+.related-card-text{font-size:9px;color:#9896b8;line-height:1.5;word-break:break-word;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.related-card-meta{font-size:8px;color:#3a3860;margin-top:.2rem}
+.related-card-keywords{font-size:8px;color:#534AB7;margin-top:.15rem}
 </style>
 </head>
 <body>
@@ -134,27 +135,31 @@ textarea::placeholder{color:#3a3a3a}
         <span class="char-count" id="char-count">0 / 10,000</span>
       </div>
     </div>
-    <div class="mini-cal">
-      <div class="mcal-header">
-        <button class="mcal-nav" id="prev-btn"><i class="ti ti-chevron-left"></i></button>
-        <span class="mcal-title" id="cal-title"></span>
-        <button class="mcal-nav" id="next-btn"><i class="ti ti-chevron-right"></i></button>
+
+    <!-- 달력 + 연관메모 세로 스택 -->
+    <div class="side-col">
+      <div class="mini-cal">
+        <div class="mcal-header">
+          <button class="mcal-nav" id="prev-btn"><i class="ti ti-chevron-left"></i></button>
+          <span class="mcal-title" id="cal-title"></span>
+          <button class="mcal-nav" id="next-btn"><i class="ti ti-chevron-right"></i></button>
+        </div>
+        <div class="mcal-grid" id="cal-grid"></div>
       </div>
-      <div class="mcal-grid" id="cal-grid"></div>
+
+      <div class="related-panel" id="related-panel" style="display:none">
+        <div class="related-header">
+          <div class="related-title"><i class="ti ti-link"></i> 연관 기록</div>
+          <button class="related-close" id="related-close"><i class="ti ti-x"></i></button>
+        </div>
+        <div class="related-list" id="related-list"></div>
+      </div>
     </div>
   </div>
 
   <div id="memo-panel" style="display:none">
     <div class="memo-panel-title" id="panel-title"></div>
     <div class="memo-list" id="memo-list"></div>
-  </div>
-
-  <div class="related-panel" id="related-panel" style="display:none">
-    <div class="related-header">
-      <div class="related-title"><i class="ti ti-link"></i> 연관된 과거의 기록이 있습니다</div>
-      <button class="related-close" id="related-close"><i class="ti ti-x"></i></button>
-    </div>
-    <div class="related-list" id="related-list"></div>
   </div>
 </div>
 
@@ -388,11 +393,23 @@ async function addMemo() {
   const text = input.value.trim();
   if (!text || !currentUser) return;
 
-  // 저장 전에 연관 메모 먼저 계산 (allMemos 기준)
-  const related = findRelatedMemos(text, null);
+  // 저장 전 현재 메모 목록 스냅샷 (방금 저장할 메모는 아직 없음)
+  const memosBefore = allMemos.slice();
 
   const savedTs = Date.now();
   await addDoc(collection(db, 'memos'), { uid: currentUser.uid, text, ts: savedTs });
+
+  // 저장 후: 저장 전 목록 기준으로 연관 메모 계산 (새 메모 자신 제외)
+  const newKws = extractKeywords(text);
+  const newSet = new Set(newKws);
+  const related = [];
+  memosBefore.forEach(memo => {
+    const memoKws = extractKeywords(memo.text);
+    const matched = memoKws.filter(k => newSet.has(k));
+    if (matched.length >= 2) related.push({ memo, matched });
+  });
+  related.sort((a, b) => b.matched.length - a.matched.length);
+  const top = related.slice(0, 5);
 
   input.value = '';
   document.getElementById('char-count').textContent = '0 / 10,000';
@@ -403,7 +420,7 @@ async function addMemo() {
   viewYear = todayObj.getFullYear(); viewMonth = todayObj.getMonth();
   renderCal();
   selectDay(todayKey, todayObj.getDate());
-  showRelatedPanel(related);
+  showRelatedPanel(top);
 }
 
 // ── 인증 ──────────────────────────────────────────
