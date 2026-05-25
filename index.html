@@ -559,7 +559,7 @@ textarea::placeholder{color:var(--ui-muted)}
   </div>
 
   <!-- 모바일 헤더 -->
-  <div class="app-header mobile-only">
+  <div class="app-header mobile-only" style="display:none">
     <div class="header-left">
       <div class="date-label">오늘</div>
       <div class="date-text" id="today-display-m"></div>
@@ -601,7 +601,7 @@ textarea::placeholder{color:var(--ui-muted)}
   </div>
 
   <!-- 모바일 레이아웃: 입력창 → 달력 세로 배치 -->
-  <div class="mobile-only mobile-layout">
+  <div class="mobile-only mobile-layout" style="display:none">
     <div class="compose">
       <div class="compose-top">
         <textarea id="memo-input-m" placeholder="지금 무슨 생각을 하고 있나요?" maxlength="10000"></textarea>
@@ -945,6 +945,7 @@ window.addEventListener('resize', function() {
     lastCanvasWidth = canvas.width;
     buildAllStones(lastStoneCount);
     drawStones();
+    applyLayout(); // PC↔모바일 전환 시 레이아웃 재적용
   }, 150);
 });
 resizeCanvas();
@@ -966,6 +967,30 @@ function showView(name) {
   ['loading-view','login-view','app-view'].forEach(function(id) {
     document.getElementById(id).style.display = (id === name+'-view') ? 'block' : 'none';
   });
+  // app-view 표시 시 PC/모바일 분기 강제 적용
+  if (name === 'app') applyLayout();
+}
+
+function applyLayout() {
+  var mobile = window.innerWidth <= 600;
+  // PC 요소
+  var pcHeader  = document.querySelector('.app-header.pc-only');
+  var pcMain    = document.querySelector('.main-row.pc-only');
+  // 모바일 요소
+  var mobHeader = document.querySelector('.app-header.mobile-only');
+  var mobLayout = document.querySelector('.mobile-layout');
+
+  if (mobile) {
+    if (pcHeader)  pcHeader.style.display  = 'none';
+    if (pcMain)    pcMain.style.display    = 'none';
+    if (mobHeader) mobHeader.style.display = 'flex';
+    if (mobLayout) mobLayout.style.display = 'block';
+  } else {
+    if (pcHeader)  pcHeader.style.display  = 'flex';
+    if (pcMain)    pcMain.style.display    = 'flex';
+    if (mobHeader) mobHeader.style.display = 'none';
+    if (mobLayout) mobLayout.style.display = 'none';
+  }
 }
 
 function dateKey(d) {
