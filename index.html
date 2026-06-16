@@ -1020,12 +1020,36 @@ var SW = '이 그 저 것 수 을 를 가 은 는 에 의 로 으로 와 과 도
 var STOP = {};
 for (var si = 0; si < SW.length; si++) STOP[SW[si]] = true;
 
+// 한국어 명사 추출(경량 형태소 정규화)
+// "신박하게 / 신박한 / 신박함" -> "신박" 처럼 조사·어미를 떼어 어간(명사)만 남김
+function koStem(w) {
+  w = (w || '').toLowerCase().trim();
+  if (!w) return w;
+  if (!/[가-힣]/.test(w)) return w;
+  var prev;
+  do {
+    prev = w;
+    w = w.replace(/(스러우|스러운|스러워|스럽게|스럽다|스럽)$/, '');
+    w = w.replace(/(로워|로운|롭게|롭다)$/, '');
+    w = w.replace(/(하였|하여서|하여|했었|했던|했다|했어|했고|했지|하게|하기|하고|하지|하며|하면|하는|하던|하다|한다|합니다|해서|해도|해야|함|할|한|해)$/, '');
+    w = w.replace(/(되었|되어서|되어|됐다|됐어|되게|되고|되는|되던|되다|된다|됨|될|된)$/, '');
+    w = w.replace(/(적으로|적인|적)$/, '');
+    w = w.replace(/(들|등)$/, '');
+    w = w.replace(/(이라도|이라는|이라고|에서는|으로는|에게서|에서|에게|한테|으로|까지|부터|처럼|같이|보다|마다|조차|밖에|라도|라는|라고|이나|이며|이고|에는|에도|로는)$/, '');
+    if (w.length >= 3) w = w.replace(/(은|는|이|가|을|를|와|과|의|에|도|만|로)$/, '');
+  } while (w !== prev && w.length >= 2);
+  return w.length >= 1 ? w : prev;
+}
+
 function getWords(text) {
   var raw = text.replace(/[^\uAC00-\uD7A3a-zA-Z0-9\s]/g, ' ').split(/\s+/);
   var result = []; var seen = {};
   for (var i = 0; i < raw.length; i++) {
     var w = raw[i].trim();
-    if (w.length >= 2 && !STOP[w] && !seen[w]) { seen[w]=true; result.push(w); }
+    if (w.length < 2 || STOP[w]) continue;
+    var s = koStem(w);
+    if (!s || s.length < 2 || STOP[s] || seen[s]) continue;
+    seen[s] = true; result.push(s);
   }
   return result;
 }
@@ -1291,13 +1315,33 @@ function escapeRegex(s) {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-function highlightText(text, query) {
-  var re = new RegExp('(' + escapeRegex(query) + ')', 'gi');
+// 검색어를 어간(명사) 토큰으로 분해 — "신박하게" -> ["신박"]
+function searchTokens(query) {
+  return (query || '').toLowerCase().trim().split(/\s+/)
+    .map(function(t){ return t.replace(/[^가-힣a-z0-9]/g, ''); })
+    .filter(Boolean)
+    .map(koStem)
+    .filter(function(t){ return t && t.length >= 1; });
+}
+// 모든 토큰이 본문에 (부분문자열로) 들어있으면 매치
+function memoMatchesTokens(text, tokens) {
+  if (!tokens.length) return false;
+  var low = text.toLowerCase();
+  for (var i = 0; i < tokens.length; i++) {
+    if (low.indexOf(tokens[i]) === -1) return false;
+  }
+  return true;
+}
+
+function highlightText(text, tokens) {
+  var toks = (Array.isArray(tokens) ? tokens : [tokens]).filter(Boolean).map(escapeRegex);
   var div = document.createElement('div');
   div.className = 'search-result-text';
-  // 하이라이트를 위해 파트로 분리
+  if (toks.length === 0) { div.textContent = text; return div; }
+  var re = new RegExp('(' + toks.join('|') + ')', 'gi');
   var parts = text.split(re);
   for (var i = 0; i < parts.length; i++) {
+    if (!parts[i]) continue;
     if (re.test(parts[i])) {
       var mark = document.createElement('mark');
       mark.textContent = parts[i];
@@ -1321,9 +1365,9 @@ function runSearch(query) {
     return;
   }
 
-  var q = query.toLowerCase();
+  var tokens = searchTokens(query);
   var matched = allMemos.filter(function(m){
-    return m.text.toLowerCase().indexOf(q) !== -1;
+    return memoMatchesTokens(m.text, tokens);
   }).sort(function(a,b){ return b.ts - a.ts; });
 
   list.innerHTML = '';
@@ -1353,7 +1397,7 @@ function runSearch(query) {
       dateEl.textContent = dateStr + ' ' + hh + ':' + mm;
 
       content.appendChild(dateEl);
-      content.appendChild(highlightText(memo.text, query));
+      content.appendChild(highlightText(memo.text, tokens));
       card.appendChild(content);
 
       // 클릭 시 해당 날짜로 이동
@@ -1396,9 +1440,9 @@ document.getElementById('search-input').addEventListener('input', function() {
 
   if (!query) { preview.style.display = 'none'; return; }
 
-  var q = query.toLowerCase();
+  var tokens = searchTokens(query);
   var matched = allMemos.filter(function(m){
-    return m.text.toLowerCase().indexOf(q) !== -1;
+    return memoMatchesTokens(m.text, tokens);
   }).sort(function(a,b){ return b.ts - a.ts; }).slice(0, 5);
 
   if (matched.length === 0) {
@@ -1416,7 +1460,7 @@ document.getElementById('search-input').addEventListener('input', function() {
       dateEl.className = 'search-preview-date';
       dateEl.textContent = dateStr;
       item.appendChild(dateEl);
-      item.appendChild(highlightText(memo.text, query));
+      item.appendChild(highlightText(memo.text, tokens));
       item.querySelector('.search-result-text').className = 'search-preview-text';
       // 미리보기 클릭 시 바로 이동
       (function(d) {
